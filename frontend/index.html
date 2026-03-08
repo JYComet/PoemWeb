@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>诗韵雅集 · 古诗词智能问答</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <!-- 顶部导航 -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">詩</span>
+        <h1>诗韵雅集</h1>
+        <p class="subtitle">古诗词智能问答 · 一站式学习与互动</p>
+      </div>
+      <nav class="nav">
+        <a href="#" class="nav-link active" data-section="search">多维检索</a>
+        <a href="#" class="nav-link" data-section="qa">智能问答</a>
+        <a href="#" class="nav-link" data-section="feihualing">飞花令</a>
+        <a href="#" class="nav-link" data-section="ai-write">AI 写诗</a>
+        <a href="#" class="nav-link" data-section="recite">背诵默写</a>
+        <a href="#" class="nav-link" data-section="nav">分类导航</a>
+        <a href="#" class="nav-link" data-section="graph">知识图谱</a>
+        <a href="#" class="nav-link" data-section="trajectory">诗人行迹</a>
+      </nav>
+    </header>
+
+    <main class="main">
+      <!-- 多维检索 -->
+      <section id="search" class="section active">
+        <div class="section-header">
+          <h2>多维诗词检索</h2>
+          <p>按诗名、作者、朝代、题材等多维度精准查找</p>
+        </div>
+        <div class="search-form">
+          <input type="text" id="search-keyword" placeholder="关键词（诗名/诗句）">
+          <input type="text" id="search-author" placeholder="诗人">
+          <input type="text" id="search-dynasty" placeholder="朝代">
+          <input type="text" id="search-tag" placeholder="题材（春/月/山水等）">
+          <button class="btn btn-primary" id="btn-search">检索</button>
+        </div>
+        <div class="poem-grid" id="search-results"></div>
+      </section>
+
+      <!-- 智能问答 -->
+      <section id="qa" class="section">
+        <div class="section-header">
+          <h2>自然语言智能问答</h2>
+          <p>用自然语言提问，如：李白写过什么诗？静夜思是谁写的？</p>
+        </div>
+        <div class="qa-box">
+          <textarea id="qa-input" placeholder="请输入您的问题，例如：&#10;· 李白写过什么诗？&#10;· 静夜思是谁写的？&#10;· 唐代有哪些诗人？&#10;· 某诗句出自哪首诗？"></textarea>
+          <button class="btn btn-primary" id="btn-qa">提问</button>
+          <div class="qa-result" id="qa-result"></div>
+        </div>
+      </section>
+
+      <!-- 飞花令 -->
+      <section id="feihualing" class="section">
+        <div class="section-header">
+          <h2>飞花令</h2>
+          <p>输入一个汉字，找出包含该字的所有诗句</p>
+        </div>
+        <div class="feihualing-box">
+          <input type="text" id="feihualing-char" maxlength="1" placeholder="输入一字">
+          <button class="btn btn-primary" id="btn-feihualing">开始</button>
+          <div class="feihualing-result" id="feihualing-result"></div>
+        </div>
+      </section>
+
+      <!-- AI 写诗 -->
+      <section id="ai-write" class="section">
+        <div class="section-header">
+          <h2>AI 写诗</h2>
+          <p>输入主题，AI 为您即兴创作</p>
+        </div>
+        <div class="ai-write-box">
+          <input type="text" id="ai-theme" placeholder="输入主题，如：春、月、山水" value="春">
+          <button class="btn btn-primary" id="btn-ai-write">生成诗词</button>
+          <div class="ai-result" id="ai-result"></div>
+        </div>
+      </section>
+
+      <!-- 背诵默写 -->
+      <section id="recite" class="section">
+        <div class="section-header">
+          <h2>诗词背诵与默写</h2>
+          <p>随机抽取诗词进行背诵练习或填空默写</p>
+        </div>
+        <div class="recite-box">
+          <div class="recite-btns">
+            <button class="btn btn-primary" id="btn-recite">随机背诵</button>
+            <button class="btn btn-secondary" id="btn-dictation">填空默写</button>
+          </div>
+          <div class="recite-content" id="recite-content"></div>
+          <div class="dictation-answer" id="dictation-answer" style="display:none"></div>
+        </div>
+      </section>
+
+      <!-- 分类导航 -->
+      <section id="nav" class="section">
+        <div class="section-header">
+          <h2>诗人 · 题材 · 朝代</h2>
+          <p>按分类浏览古诗词</p>
+        </div>
+        <div class="nav-tabs">
+          <button class="tab-btn active" data-tab="authors">诗人</button>
+          <button class="tab-btn" data-tab="tags">题材</button>
+          <button class="tab-btn" data-tab="dynasties">朝代</button>
+        </div>
+        <div class="nav-content" id="nav-content"></div>
+      </section>
+
+      <!-- 知识图谱 -->
+      <section id="graph" class="section">
+        <div class="section-header">
+          <h2>诗词知识图谱</h2>
+          <p>诗人 · 朝代 · 诗词 · 题材 关系可视化，支持拖拽与缩放</p>
+        </div>
+        <div class="graph-toolbar">
+          <button class="btn btn-secondary" id="graph-refresh">刷新图谱</button>
+        </div>
+        <div class="chart-container" id="knowledge-graph-chart"></div>
+      </section>
+
+      <!-- 诗人行迹 -->
+      <section id="trajectory" class="section">
+        <div class="section-header">
+          <h2>诗人行迹</h2>
+          <p>诗人作品数量排行、朝代分布、创作题材轨迹与地点行迹地图</p>
+        </div>
+        <div class="trajectory-tabs">
+          <button class="tab-btn active" data-trajectory-tab="stats">统计图表</button>
+          <button class="tab-btn" data-trajectory-tab="map">行迹地图</button>
+        </div>
+        <!-- 统计图表 -->
+        <div id="trajectory-stats" class="trajectory-panel">
+          <div class="trajectory-select">
+            <label>选择诗人查看创作题材分布：</label>
+            <select id="trajectory-poet">
+              <option value="">-- 请选择 --</option>
+            </select>
+          </div>
+          <div class="chart-row">
+            <div class="chart-container half" id="trajectory-bar-chart"></div>
+            <div class="chart-container half" id="trajectory-pie-chart"></div>
+          </div>
+          <div class="chart-container" id="poet-tag-chart" style="display:none"></div>
+        </div>
+        <!-- 行迹地图 -->
+        <div id="trajectory-map" class="trajectory-panel" style="display:none">
+          <div class="trajectory-map-toolbar">
+            <label>选择诗人：</label>
+            <select id="trajectory-map-poet">
+              <option value="">-- 请选择诗人 --</option>
+            </select>
+            <span class="map-hint">点击地图上的地点可查看该处创作的诗词</span>
+          </div>
+          <div class="chart-container trajectory-map-container" id="poet-trajectory-map"></div>
+          <div class="trajectory-detail-panel" id="trajectory-detail-panel"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 诗词详情弹窗 -->
+    <div class="modal" id="poem-modal">
+      <div class="modal-content">
+        <button class="modal-close" id="modal-close">×</button>
+        <div class="poem-detail" id="poem-detail"></div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p>诗韵雅集 · 传承中华诗词之美</p>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/echarts-graph.js"></script>
+  <script src="js/poet-map.js"></script>
+</body>
+</html>

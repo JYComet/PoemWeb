@@ -160,22 +160,7 @@ def feihualing():
     return jsonify({'success': True, 'data': lines[:30], 'char': char})
 
 
-@app.route('/api/ai/write', methods=['POST'])
-def ai_write_poem():
-    """AI 写诗"""
-    theme = request.json.get('theme', '春').strip() or '春'
-    # 简单模板生成（可接入真实 AI API）
-    templates = [
-        f'{theme}风拂面暖，万物复苏时。',
-        f'一{theme}一世界，一花一菩提。',
-        f'待到{theme}来日，花开满枝头。',
-        f'{theme}水悠悠去，青山隐隐来。',
-        f'明月照{theme}江，清风送客归。'
-    ]
-    import random
-    lines = random.sample(templates, 4)
-    poem = '\n'.join(lines)
-    return jsonify({'success': True, 'data': {'content': poem, 'title': f'《{theme}》'}})
+
 
 
 @app.route('/api/ai/describe_poem', methods=['POST'])

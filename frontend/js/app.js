@@ -12,7 +12,287 @@ document.querySelectorAll('.nav-link').forEach(link => {
     link.classList.add('active');
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.getElementById(section).classList.add('active');
+    
+    // 如果是首页，加载推荐诗词、随机古诗和初始化功能卡片
+    if (section === 'home') {
+      loadHomePoems();
+      loadRandomPoem();
+      setTimeout(initFeatureCards, 100);
+    }
   });
+});
+
+// 搜索栏交互
+const searchBar = document.querySelector('.search-bar');
+const searchDropdown = document.getElementById('search-dropdown');
+const topSearchInput = document.getElementById('top-search-input');
+const topSearchBtn = document.getElementById('top-search-btn');
+
+// 点击搜索栏展开/收起
+searchBar.addEventListener('click', (e) => {
+  e.stopPropagation();
+  searchDropdown.classList.toggle('active');
+});
+
+// 点击页面其他地方收起搜索栏
+document.addEventListener('click', (e) => {
+  if (!searchBar.contains(e.target) && !searchDropdown.contains(e.target)) {
+    searchDropdown.classList.remove('active');
+  }
+});
+
+// 顶部搜索框回车搜索
+topSearchInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    const keyword = topSearchInput.value.trim();
+    if (keyword) {
+      // 将关键词填入详细搜索框并执行搜索
+      document.getElementById('search-keyword').value = keyword;
+      searchPoems();
+      // 切换到搜索页面
+      document.querySelector('.nav-link[data-section="search"]').click();
+    }
+  }
+});
+
+// 顶部搜索按钮点击
+topSearchBtn.addEventListener('click', () => {
+  const keyword = topSearchInput.value.trim();
+  if (keyword) {
+    // 将关键词填入详细搜索框并执行搜索
+    document.getElementById('search-keyword').value = keyword;
+    searchPoems();
+    // 切换到搜索页面
+    document.querySelector('.nav-link[data-section="search"]').click();
+  } else {
+    // 展开详细搜索栏
+    searchDropdown.classList.toggle('active');
+  }
+});
+
+// 下拉搜索框搜索按钮点击
+const dropdownSearchBtn = document.getElementById('dropdown-btn-search');
+if (dropdownSearchBtn) {
+  dropdownSearchBtn.addEventListener('click', () => {
+    // 将下拉搜索框的值复制到主搜索框
+    document.getElementById('search-keyword').value = document.getElementById('dropdown-search-keyword').value.trim();
+    document.getElementById('search-author').value = document.getElementById('dropdown-search-author').value.trim();
+    document.getElementById('search-dynasty').value = document.getElementById('dropdown-search-dynasty').value.trim();
+    document.getElementById('search-tag').value = document.getElementById('dropdown-search-tag').value.trim();
+    // 执行搜索
+    searchPoems();
+    // 切换到搜索页面
+    document.querySelector('.nav-link[data-section="search"]').click();
+    // 收起下拉搜索框
+    searchDropdown.classList.remove('active');
+  });
+}
+
+// 首页按钮导航
+document.querySelectorAll('.hero-buttons a').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const section = btn.dataset.section;
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    document.querySelector(`.nav-link[data-section="${section}"]`).classList.add('active');
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(section).classList.add('active');
+  });
+});
+
+// 加载首页推荐诗词
+async function loadHomePoems() {
+  const slider = document.getElementById('home-poems-slider');
+  if (!slider) return;
+  
+  try {
+    // 获取推荐诗词（使用搜索接口获取热门诗词）
+    const res = await fetch(`${API_BASE}/api/poems/search`);
+    const json = await res.json();
+    
+    if (json.success && json.data) {
+      const poems = json.data.slice(0, 6); // 取前6首诗词
+      
+      // 生成滑块内容
+      let sliderHtml = `
+        <div class="slider-container" id="slider-container">
+          ${poems.map(poem => `
+            <div class="slider-item" data-title="${escapeHtml(poem.title)}">
+              <div class="poem-title">《${escapeHtml(poem.title)}》</div>
+              <div class="poem-meta">${escapeHtml(poem.author)} · ${escapeHtml(poem.dynasty)}</div>
+              <div class="poem-preview">${escapeHtml((poem.content || '').slice(0, 100))}...</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="slider-controls">
+          <button class="slider-btn" id="slider-prev">‹</button>
+          <button class="slider-btn" id="slider-next">›</button>
+        </div>
+      `;
+      
+      slider.innerHTML = sliderHtml;
+      
+      // 添加诗词卡片点击事件
+      slider.querySelectorAll('.slider-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const title = item.dataset.title;
+          showPoemDetail(title);
+        });
+      });
+      
+      // 初始化滑块控制
+      initSlider();
+    }
+  } catch (error) {
+    console.error('加载推荐诗词失败:', error);
+  }
+}
+
+// 初始化滑块控制
+function initSlider() {
+  const container = document.getElementById('slider-container');
+  const prevBtn = document.getElementById('slider-prev');
+  const nextBtn = document.getElementById('slider-next');
+  
+  if (!container || !prevBtn || !nextBtn) return;
+  
+  let position = 0;
+  const itemWidth = 300 + 24; //  item width + margin
+  const itemsCount = container.children.length;
+  const maxPosition = Math.max(0, (itemsCount - 3) * itemWidth); // 显示3个项目
+  
+  prevBtn.addEventListener('click', () => {
+    position = Math.max(0, position - itemWidth);
+    container.style.transform = `translateX(-${position}px)`;
+  });
+  
+  nextBtn.addEventListener('click', () => {
+    position = Math.min(maxPosition, position + itemWidth);
+    container.style.transform = `translateX(-${position}px)`;
+  });
+}
+
+// 为首页核心功能卡片添加点击跳转
+function initFeatureCards() {
+  const featureCards = document.querySelectorAll('.feature-card');
+  featureCards.forEach(card => {
+    card.addEventListener('click', () => {
+      const cardText = card.textContent.toLowerCase();
+      let section = '';
+      
+      if (cardText.includes('多维检索')) {
+        section = 'search';
+      } else if (cardText.includes('智能问答')) {
+        section = 'qa';
+      } else if (cardText.includes('飞花令')) {
+        section = 'feihualing';
+      } else if (cardText.includes('背诵默写')) {
+        section = 'recite';
+      } else if (cardText.includes('知识图谱')) {
+        section = 'graph';
+      } else if (cardText.includes('诗人行迹')) {
+        section = 'trajectory';
+      }
+      
+      if (section) {
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        document.querySelector(`.nav-link[data-section="${section}"]`).classList.add('active');
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(section).classList.add('active');
+      }
+    });
+    
+    // 添加鼠标悬停效果
+    card.style.cursor = 'pointer';
+  });
+}
+
+// 加载随机古诗
+async function loadRandomPoem() {
+  const container = document.getElementById('random-poem-content');
+  if (!container) return;
+  
+  try {
+    // 获取随机古诗（使用搜索接口获取所有古诗，然后随机选择）
+    const res = await fetch(`${API_BASE}/api/poems/search`);
+    const json = await res.json();
+    
+    if (json.success && json.data && json.data.length > 0) {
+      // 随机选择一首古诗
+      const randomIndex = Math.floor(Math.random() * json.data.length);
+      const poem = json.data[randomIndex];
+      
+      // 显示随机古诗
+      container.innerHTML = `
+        <div class="random-poem-item" data-title="${escapeHtml(poem.title)}">
+          <div class="poem-title">《${escapeHtml(poem.title)}》</div>
+          <div class="poem-meta">${escapeHtml(poem.author)} · ${escapeHtml(poem.dynasty)}</div>
+          <div class="poem-text">${escapeHtml(formatContent(poem.content))}</div>
+        </div>
+      `;
+      
+      // 添加点击事件
+      const poemItem = container.querySelector('.random-poem-item');
+      if (poemItem) {
+        poemItem.addEventListener('click', () => {
+          const title = poemItem.dataset.title;
+          showPoemDetail(title);
+        });
+        // 添加鼠标悬停效果
+        poemItem.style.cursor = 'pointer';
+      }
+    } else {
+      container.innerHTML = '<p class="empty">暂无诗词</p>';
+    }
+  } catch (error) {
+    console.error('加载随机古诗失败:', error);
+    container.innerHTML = '<p class="empty">加载失败</p>';
+  }
+}
+
+// 页面加载时初始化首页
+window.addEventListener('load', () => {
+  const activeSection = document.querySelector('.section.active');
+  if (activeSection && activeSection.id === 'home') {
+    loadHomePoems();
+    loadRandomPoem(); // 加载随机古诗
+  }
+  
+  // 初始化功能卡片点击事件
+  initFeatureCards();
+  
+  // 添加刷新按钮点击事件
+  const refreshBtn = document.getElementById('btn-refresh-poem');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadRandomPoem);
+  }
+  
+  // 初始化回到顶部按钮
+  initBackToTop();
+  
+  // 重新绑定搜索按钮点击事件
+  const searchBtn = document.getElementById('btn-search');
+  if (searchBtn) {
+    searchBtn.addEventListener('click', searchPoems);
+  }
+  
+  // 绑定下拉搜索框按钮事件
+  const dropdownSearchBtn = document.getElementById('dropdown-btn-search');
+  if (dropdownSearchBtn) {
+    dropdownSearchBtn.addEventListener('click', () => {
+      // 将下拉搜索框的值复制到主搜索框
+      document.getElementById('search-keyword').value = document.getElementById('dropdown-search-keyword').value.trim();
+      document.getElementById('search-author').value = document.getElementById('dropdown-search-author').value.trim();
+      document.getElementById('search-dynasty').value = document.getElementById('dropdown-search-dynasty').value.trim();
+      document.getElementById('search-tag').value = document.getElementById('dropdown-search-tag').value.trim();
+      // 执行搜索
+      searchPoems();
+      // 切换到搜索页面
+      document.querySelector('.nav-link[data-section="search"]').click();
+      // 收起下拉搜索框
+      searchDropdown.classList.remove('active');
+    });
+  }
 });
 
 // 多维检索
@@ -43,16 +323,56 @@ async function searchPoems() {
     return;
   }
 
-  container.innerHTML = poems.map(p => `
-    <div class="poem-card" data-title="${escapeHtml(p.title)}">
-      <div class="title">《${escapeHtml(p.title)}》</div>
-      <div class="meta">${escapeHtml(p.author)} · ${escapeHtml(p.dynasty)} · ${escapeHtml(p.tag || '')}</div>
-      <div class="preview">${escapeHtml((p.content || '').slice(0, 80))}...</div>
-    </div>
-  `).join('');
+  // 如果是诗人检索，先展示诗人介绍
+  if (author) {
+    // 提取诗人信息（假设所有结果都是同一诗人的作品）
+    const poetInfo = poems[0];
+    const poetDynasty = poetInfo.dynasty || '未知朝代';
+    const poemCount = poems.length;
+    
+    // 生成诗人介绍
+    const authorIntro = `
+      <div class="poet-intro" data-author="${escapeHtml(author)}">
+        <h3>${escapeHtml(author)}</h3>
+        <p class="poet-meta">${escapeHtml(poetDynasty)} · 共 ${poemCount} 首诗词</p>
+        <p class="poet-description">${escapeHtml(author)}是${poetDynasty}著名诗人，其作品题材广泛，风格独特，在中国文学史上占有重要地位。以下是其部分代表作品：</p>
+      </div>
+    `;
+    
+    // 生成诗词卡片
+    const poemCards = poems.map(p => `
+      <div class="poem-card" data-title="${escapeHtml(p.title)}">
+        <div class="title">《${escapeHtml(p.title)}》</div>
+        <div class="meta">${escapeHtml(p.dynasty)} · ${escapeHtml(p.tag || '')}</div>
+        <div class="preview">${escapeHtml((p.content || '').slice(0, 80))}...</div>
+      </div>
+    `).join('');
+    
+    container.innerHTML = authorIntro + poemCards;
+  } else {
+    // 普通搜索，直接展示诗词卡片
+    container.innerHTML = poems.map(p => `
+      <div class="poem-card" data-title="${escapeHtml(p.title)}">
+        <div class="title">《${escapeHtml(p.title)}》</div>
+        <div class="meta">${escapeHtml(p.author)} · ${escapeHtml(p.dynasty)} · ${escapeHtml(p.tag || '')}</div>
+        <div class="preview">${escapeHtml((p.content || '').slice(0, 80))}...</div>
+      </div>
+    `).join('');
+  }
 
+  // 添加诗词卡片点击事件
   container.querySelectorAll('.poem-card').forEach(card => {
     card.addEventListener('click', () => showPoemDetail(card.dataset.title));
+  });
+  
+  // 添加诗人介绍点击事件
+  container.querySelectorAll('.poet-intro').forEach(intro => {
+    intro.addEventListener('click', () => {
+      const author = intro.dataset.author;
+      showPoetDetail(author);
+    });
+    // 添加鼠标悬停效果
+    intro.style.cursor = 'pointer';
   });
 }
 
@@ -108,60 +428,274 @@ async function askQuestion() {
 
 document.getElementById('btn-qa').addEventListener('click', askQuestion);
 
+// 飞花令游戏状态
+let feihualingGameState = {
+  targetChar: '',
+  usedLines: new Set(),
+  allLines: [],
+  gameStarted: false
+};
+
+// 诗词接龙游戏状态
+let solitaireGameState = {
+  mode: 'next', // 'next' 上句接下句, 'prev' 下句猜上句
+  currentPoem: null,
+  currentIndex: 0,
+  score: 0,
+  usedPoems: new Set(),
+  gameStarted: false
+};
+
 // 飞花令
 async function feihualing() {
   const char = document.getElementById('feihualing-char').value.trim();
   const resultEl = document.getElementById('feihualing-result');
+  const gameEl = document.getElementById('feihualing-game');
 
   if (!char || char.length !== 1) {
     resultEl.innerHTML = '<p class="empty">请输入一个汉字</p>';
     return;
   }
 
+  // 隐藏结果区域，显示游戏区域
+  resultEl.style.display = 'none';
+  gameEl.style.display = 'block';
+
+  // 初始化游戏状态
+  feihualingGameState = {
+    targetChar: char,
+    usedLines: new Set(),
+    allLines: [],
+    gameStarted: true
+  };
+
+  // 获取所有含该字的诗句
   const res = await fetch(`${API_BASE}/api/feihualing?char=${encodeURIComponent(char)}`);
   const json = await res.json();
 
-  if (!json.success) {
-    resultEl.innerHTML = `<p class="empty">${escapeHtml(json.message || '未找到')}</p>`;
+  if (!json.success || !json.data || json.data.length === 0) {
+    document.getElementById('game-status').innerHTML = `<p class="empty">未找到含「${char}」的诗句</p>`;
     return;
   }
 
-  const lines = json.data || [];
-  resultEl.innerHTML = lines.length
-    ? `<p style="margin-bottom:0.5rem;color:var(--ink-muted)">含「${char}」的诗句：</p>` +
-      lines.map(l => `<div class="line-item">${escapeHtml(l.line)} — 《${escapeHtml(l.title)}》${escapeHtml(l.author)}</div>`).join('')
-    : '<p class="empty">未找到含该字的诗句</p>';
+  feihualingGameState.allLines = json.data;
+
+  // 系统先抛出第一句
+  startFeihualingGame();
+}
+
+// 开始飞花令游戏
+function startFeihualingGame() {
+  const statusEl = document.getElementById('game-status');
+  const historyEl = document.getElementById('game-history');
+  const char = feihualingGameState.targetChar;
+
+  // 显示游戏状态
+  statusEl.innerHTML = `<h4>飞花令：「${char}」</h4><p>系统先开始，请输入含「${char}」的诗句</p>`;
+  historyEl.innerHTML = '';
+
+  // 系统抛出第一句
+  systemThrowLine();
+
+  // 绑定事件
+  document.getElementById('btn-submit').addEventListener('click', submitUserLine);
+  document.getElementById('btn-hint').addEventListener('click', showHint);
+
+  // 回车提交
+  document.getElementById('user-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      submitUserLine();
+    }
+  });
+}
+
+// 系统抛出一句
+function systemThrowLine() {
+  const historyEl = document.getElementById('game-history');
+  const char = feihualingGameState.targetChar;
+  const allLines = feihualingGameState.allLines;
+  const usedLines = feihualingGameState.usedLines;
+
+  // 过滤出未使用的诗句（忽略标点符号）
+  const availableLines = allLines.filter(line => {
+    return !isLineDuplicate(line.line, usedLines);
+  });
+
+  if (availableLines.length === 0) {
+    showAlert(`游戏结束，已无更多含「${char}」的诗句`);
+    document.getElementById('game-status').innerHTML = `<h4>游戏结束</h4><p>已无更多含「${char}」的诗句</p>`;
+    return;
+  }
+
+  // 随机选择一句
+  const randomIndex = Math.floor(Math.random() * availableLines.length);
+  const line = availableLines[randomIndex];
+
+  // 添加到已使用集合
+  usedLines.add(line.line);
+
+  // 显示系统抛出的诗句
+  historyEl.innerHTML += `
+    <div class="game-turn system-turn">
+      <div class="turn-label">系统：</div>
+      <div class="turn-content">${escapeHtml(line.line)} — 《${escapeHtml(line.title)}》${escapeHtml(line.author)}</div>
+    </div>
+  `;
+
+  // 滚动到底部
+  historyEl.scrollTop = historyEl.scrollHeight;
+
+  // 清空用户输入
+  document.getElementById('user-input').value = '';
+}
+
+// 移除标点符号的函数
+function removePunctuation(text) {
+  return text.replace(/[，。；：？！、]/g, '');
+}
+
+// 检测是否是有效诗句
+function isValidPoemLine(line) {
+  // 简单的有效诗句检测：长度至少为5个字符，且包含至少一个汉字
+  if (line.length < 5) return false;
+  if (!/[\u4e00-\u9fa5]/.test(line)) return false;
+  return true;
+}
+
+// 检查诗句是否重复（忽略标点符号）
+function isLineDuplicate(line, usedLines) {
+  const lineWithoutPunc = removePunctuation(line);
+  for (const usedLine of usedLines) {
+    const usedLineWithoutPunc = removePunctuation(usedLine);
+    if (lineWithoutPunc === usedLineWithoutPunc) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// 显示提示对话框
+function showAlert(message) {
+  // 创建对话框
+  const alertDiv = document.createElement('div');
+  alertDiv.style.position = 'fixed';
+  alertDiv.style.top = '50%';
+  alertDiv.style.left = '50%';
+  alertDiv.style.transform = 'translate(-50%, -50%)';
+  alertDiv.style.background = 'white';
+  alertDiv.style.padding = '2rem';
+  alertDiv.style.borderRadius = '8px';
+  alertDiv.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
+  alertDiv.style.zIndex = '1000';
+  alertDiv.style.textAlign = 'center';
+  alertDiv.style.minWidth = '300px';
+  
+  // 对话框内容
+  alertDiv.innerHTML = `
+    <p style="margin-bottom: 1.5rem; font-size: 1.1rem;">${message}</p>
+    <button class="btn btn-primary" style="padding: 0.5rem 1.5rem;">确定</button>
+  `;
+  
+  // 添加到页面
+  document.body.appendChild(alertDiv);
+  
+  // 点击确定按钮关闭对话框
+  alertDiv.querySelector('button').addEventListener('click', () => {
+    document.body.removeChild(alertDiv);
+  });
+}
+
+// 用户提交诗句
+function submitUserLine() {
+  const userInput = document.getElementById('user-input').value.trim();
+  const char = feihualingGameState.targetChar;
+  const usedLines = feihualingGameState.usedLines;
+  const historyEl = document.getElementById('game-history');
+  const statusEl = document.getElementById('game-status');
+
+  if (!userInput) {
+    showAlert('请输入诗句');
+    return;
+  }
+
+  // 检查是否是有效诗句
+  if (!isValidPoemLine(userInput)) {
+    showAlert('请输入有效的诗句');
+    return;
+  }
+
+  // 检查是否包含目标字
+  if (!userInput.includes(char)) {
+    showAlert(`诗句中未包含「${char}」`);
+    return;
+  }
+
+  // 检查是否重复（忽略标点符号）
+  if (isLineDuplicate(userInput, usedLines)) {
+    showAlert('该诗句已使用过');
+    return;
+  }
+
+  // 添加到已使用集合
+  usedLines.add(userInput);
+
+  // 显示用户提交的诗句
+  historyEl.innerHTML += `
+    <div class="game-turn user-turn">
+      <div class="turn-label">用户：</div>
+      <div class="turn-content">${escapeHtml(userInput)}</div>
+    </div>
+  `;
+
+  // 滚动到底部
+  historyEl.scrollTop = historyEl.scrollHeight;
+
+  // 系统继续抛出下一句
+  setTimeout(systemThrowLine, 1000);
+}
+
+// 显示提示
+function showHint() {
+  const char = feihualingGameState.targetChar;
+  const allLines = feihualingGameState.allLines;
+  const usedLines = feihualingGameState.usedLines;
+  const historyEl = document.getElementById('game-history');
+
+  // 过滤出未使用的诗句（忽略标点符号）
+  const availableLines = allLines.filter(line => {
+    return !isLineDuplicate(line.line, usedLines);
+  });
+
+  if (availableLines.length === 0) {
+    showAlert(`已无更多含「${char}」的诗句`);
+    return;
+  }
+
+  // 随机选择一句作为提示
+  const randomIndex = Math.floor(Math.random() * availableLines.length);
+  const line = availableLines[randomIndex];
+
+  // 添加到已使用集合
+  usedLines.add(line.line);
+
+  // 显示提示
+  historyEl.innerHTML += `
+    <div class="game-turn hint-turn">
+      <div class="turn-label">提示：</div>
+      <div class="turn-content">${escapeHtml(line.line)} — 《${escapeHtml(line.title)}》${escapeHtml(line.author)}</div>
+    </div>
+  `;
+
+  // 滚动到底部
+  historyEl.scrollTop = historyEl.scrollHeight;
+
+  // 系统继续抛出下一句
+  setTimeout(systemThrowLine, 1000);
 }
 
 document.getElementById('btn-feihualing').addEventListener('click', feihualing);
 
-// AI 写诗
-async function aiWrite() {
-  const theme = document.getElementById('ai-theme').value.trim() || '春';
-  const resultEl = document.getElementById('ai-result');
 
-  resultEl.innerHTML = '<p class="empty">创作中...</p>';
-
-  const res = await fetch(`${API_BASE}/api/ai/write`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ theme })
-  });
-  const json = await res.json();
-
-  if (!json.success) {
-    resultEl.innerHTML = `<p class="empty">${escapeHtml(json.message || '生成失败')}</p>`;
-    return;
-  }
-
-  const d = json.data;
-  resultEl.innerHTML = `
-    <p style="margin-bottom:0.5rem;color:var(--ink-muted)">${escapeHtml(d.title || '')}</p>
-    <div class="poem-content">${escapeHtml(d.content || '')}</div>
-  `;
-}
-
-document.getElementById('btn-ai-write').addEventListener('click', aiWrite);
 
 // 背诵
 async function recite() {
@@ -181,7 +715,131 @@ async function recite() {
     <div class="poem-title">《${escapeHtml(p.title)}》</div>
     <div class="poem-meta">${escapeHtml(p.author)} · ${escapeHtml(p.dynasty)}</div>
     <div class="poem-text">${escapeHtml(formatContent(p.content))}</div>
+    <div style="margin-top: 1.5rem;">
+      <button class="btn btn-primary" id="btn-start-dictation">开始默写</button>
+    </div>
   `;
+  
+  // 保存诗词数据
+  container.dataset.poemTitle = p.title;
+  container.dataset.poemAuthor = p.author;
+  container.dataset.poemDynasty = p.dynasty;
+  container.dataset.poemContent = p.content;
+  
+  // 添加开始默写按钮事件
+  document.getElementById('btn-start-dictation').addEventListener('click', () => {
+    startDictation(container);
+  });
+}
+
+// 开始默写
+function startDictation(container) {
+  const title = container.dataset.poemTitle;
+  const author = container.dataset.poemAuthor;
+  const dynasty = container.dataset.poemDynasty;
+  const content = container.dataset.poemContent;
+  
+  // 按行分割内容
+  const lines = formatContent(content).split('\n').filter(line => line.trim());
+  let inputHtml = '';
+  
+  // 为每行创建一个输入框
+  lines.forEach((line, index) => {
+    const inputId = `recite-line-${index}`;
+    // 计算输入框的长度，根据诗句长度动态调整
+    const inputLength = line.length;
+    inputHtml += `
+      <div style="margin-bottom: 0.8rem;">
+        <input type="text" class="dictation-line-input" id="${inputId}" placeholder="请输入第${index + 1}行" style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px; font-family: 'Noto Serif SC', serif; font-size: 1rem;">
+      </div>
+    `;
+  });
+
+  container.innerHTML = `
+    <div class="poem-title">默写：《${escapeHtml(title)}》</div>
+    <div class="poem-meta">${escapeHtml(author)} · ${escapeHtml(dynasty)}</div>
+    <div style="margin-top: 1rem;">
+      ${inputHtml}
+    </div>
+    <div style="margin-top: 1.5rem;">
+      <button class="btn btn-primary" id="btn-submit-recite">提交答案</button>
+    </div>
+  `;
+  
+  // 添加提交按钮事件
+  document.getElementById('btn-submit-recite').addEventListener('click', () => {
+    submitRecite(container, content);
+  });
+}
+
+// 提交背诵答案
+function submitRecite(container, originalContent) {
+  const answerEl = document.getElementById('dictation-answer');
+  
+  // 获取用户输入
+  const inputs = container.querySelectorAll('.dictation-line-input');
+  const userLines = Array.from(inputs).map(input => input.value.trim());
+  
+  // 按行分割原始内容
+  const originalLines = formatContent(originalContent).split('\n').filter(line => line.trim());
+  
+  // 提取原始内容中的所有汉字（不包括标点和换行）
+  const originalChars = originalContent.split('');
+  const originalWords = [];
+  
+  for (let i = 0; i < originalChars.length; i++) {
+    if (!originalChars[i].match(/[，。；：？！\n]/)) {
+      originalWords.push(originalChars[i]);
+    }
+  }
+  
+  // 提取用户输入中的所有汉字
+  let userWords = [];
+  userLines.forEach(line => {
+    const lineChars = line.split('');
+    lineChars.forEach(char => {
+      if (!char.match(/[，。；：？！\n]/)) {
+        userWords.push(char);
+      }
+    });
+  });
+  
+  // 生成对比结果
+  let comparisonHtml = '';
+  let inputIndex = 0;
+  
+  for (let i = 0; i < originalChars.length; i++) {
+    const char = originalChars[i];
+    if (char.match(/[，。；：？！\n]/)) {
+      comparisonHtml += char;
+    } else {
+      const userAnswer = userWords[inputIndex] || '';
+      const isCorrect = userAnswer === originalWords[inputIndex];
+      comparisonHtml += isCorrect 
+        ? `<span class="correct">${escapeHtml(userAnswer || '_')}</span>`
+        : `<span class="incorrect">${escapeHtml(userAnswer || '_')}</span>`;
+      inputIndex++;
+    }
+  }
+  
+  // 计算正确率
+  let correctCount = 0;
+  for (let i = 0; i < Math.min(userWords.length, originalWords.length); i++) {
+    if (userWords[i] === originalWords[i]) {
+      correctCount++;
+    }
+  }
+  
+  // 显示结果
+  answerEl.innerHTML = `
+    <p style="margin-bottom: 0.5rem; font-weight: 600">提交结果：</p>
+    <p>答对 ${correctCount} 题，共 ${originalWords.length} 题</p>
+    <p style="margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600">您的答案：</p>
+    <div class="poem-text">${comparisonHtml}</div>
+    <p style="margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600">参考答案：</p>
+    <div class="poem-text">${escapeHtml(formatContent(originalContent))}</div>
+  `;
+  answerEl.style.display = 'block';
 }
 
 document.getElementById('btn-recite').addEventListener('click', recite);
@@ -222,8 +880,9 @@ async function dictation() {
     </div>
   `;
   
-  // 保存原始内容，用于判定答案
+  // 保存原始内容和空白内容，用于判定答案和高亮显示
   container.dataset.originalContent = contentOriginal;
+  container.dataset.contentBlank = contentBlank;
   container.dataset.poemTitle = p.title;
   container.dataset.poemAuthor = p.author;
   container.dataset.poemDynasty = p.dynasty;
@@ -264,13 +923,53 @@ async function submitDictation(container) {
     }
   }
   
+  // 生成高亮显示的答案
+  const contentBlank = container.dataset.contentBlank;
+  let highlightedContent = escapeHtml(formatContent(originalContent));
+  
+  // 分析空白位置并高亮显示
+  const blankContent = formatContent(contentBlank);
+  const originalFormatted = formatContent(originalContent);
+  
+  // 查找所有空白位置并高亮
+  let result = '';
+  let originalIndex = 0;
+  
+  for (let i = 0; i < blankContent.length; i++) {
+    if (blankContent[i] === '□') {
+      // 找到对应的原始字符并高亮
+      while (originalIndex < originalFormatted.length && 
+             (originalFormatted[originalIndex] === '。' || 
+              originalFormatted[originalIndex] === '，' || 
+              originalFormatted[originalIndex] === '、' || 
+              originalFormatted[originalIndex] === '；' || 
+              originalFormatted[originalIndex] === '：' || 
+              originalFormatted[originalIndex] === '？' || 
+              originalFormatted[originalIndex] === '！' || 
+              originalFormatted[originalIndex] === '\n')) {
+        result += originalFormatted[originalIndex];
+        originalIndex++;
+      }
+      
+      if (originalIndex < originalFormatted.length) {
+        result += `<span class="blank-highlight">${escapeHtml(originalFormatted[originalIndex])}</span>`;
+        originalIndex++;
+      }
+    } else {
+      if (originalIndex < originalFormatted.length) {
+        result += originalFormatted[originalIndex];
+        originalIndex++;
+      }
+    }
+  }
+  
   // 显示结果
   const answerEl = document.getElementById('dictation-answer');
   answerEl.innerHTML = `
     <p style="margin-bottom:0.5rem;font-weight:600">提交结果：</p>
     <p>答对 ${correctCount} 题，共 ${userAnswers.length} 题</p>
     <p style="margin-bottom:0.5rem;font-weight:600">参考答案：</p>
-    <div class="poem-text">${escapeHtml(formatContent(originalContent))}</div>
+    <div class="poem-text">${result}</div>
   `;
   answerEl.style.display = 'block';
   
@@ -319,35 +1018,274 @@ document.getElementById('btn-dictation').addEventListener('click', dictation);
 // 分类导航
 const navTabs = document.querySelectorAll('.tab-btn');
 const navContent = document.getElementById('nav-content');
+const navSearchInput = document.getElementById('nav-search-input');
+const btnNavSearch = document.getElementById('btn-nav-search');
+
+// 存储当前分类数据
+let currentTab = 'authors';
+let currentItems = [];
 
 navTabs.forEach(btn => {
   btn.addEventListener('click', async () => {
     navTabs.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const tab = btn.dataset.tab;
-    const res = await fetch(`${API_BASE}/api/nav/${tab}`);
-    const json = await res.json();
-    if (!json.success) return;
-    const items = json.data || [];
-    navContent.innerHTML = items.map(item =>
-      `<span class="nav-item" data-type="${tab}" data-name="${escapeHtml(item.name)}">${escapeHtml(item.name)} (${item.count || ''})</span>`
-    ).join('');
-    navContent.querySelectorAll('.nav-item').forEach(el => {
-      el.addEventListener('click', () => {
-        const type = el.dataset.type;
-        const name = el.dataset.name;
-        if (type === 'authors') document.getElementById('search-author').value = name;
-        else if (type === 'tags') document.getElementById('search-tag').value = name;
-        else if (type === 'dynasties') document.getElementById('search-dynasty').value = name;
-        document.querySelector('.nav-link[data-section="search"]').click();
-        document.querySelector('.nav-link[data-section="search"]').classList.add('active');
-        searchPoems();
-      });
-    });
+    currentTab = tab;
+    await loadNavItems(tab);
   });
 });
 
+// 加载分类项
+async function loadNavItems(tab) {
+  const res = await fetch(`${API_BASE}/api/nav/${tab}`);
+  const json = await res.json();
+  if (!json.success) return;
+  currentItems = json.data || [];
+  renderNavItems(currentItems);
+}
+
+// 渲染分类项
+function renderNavItems(items) {
+  navContent.innerHTML = items.map(item =>
+    `<span class="nav-item" data-type="${currentTab}" data-name="${escapeHtml(item.name)}">${escapeHtml(item.name)} (${item.count || ''})</span>`
+  ).join('');
+  navContent.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const type = el.dataset.type;
+      const name = el.dataset.name;
+      if (type === 'authors') document.getElementById('search-author').value = name;
+      else if (type === 'tags') document.getElementById('search-tag').value = name;
+      else if (type === 'dynasties') document.getElementById('search-dynasty').value = name;
+      document.querySelector('.nav-link[data-section="search"]').click();
+      document.querySelector('.nav-link[data-section="search"]').classList.add('active');
+      searchPoems();
+    });
+  });
+}
+
+// 搜索功能
+btnNavSearch.addEventListener('click', () => {
+  const searchTerm = navSearchInput.value.trim().toLowerCase();
+  if (!searchTerm) {
+    renderNavItems(currentItems);
+    return;
+  }
+  
+  const filteredItems = currentItems.filter(item => 
+    item.name.toLowerCase().includes(searchTerm)
+  );
+  renderNavItems(filteredItems);
+});
+
+// 回车键搜索
+navSearchInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    btnNavSearch.click();
+  }
+});
+
+// 初始化
 navTabs[0].click();
+
+// 诗词接龙游戏
+
+// 初始化诗词接龙游戏
+function initSolitaire() {
+  // 绑定模式切换按钮事件
+  document.getElementById('btn-mode-next').addEventListener('click', () => {
+    solitaireGameState.mode = 'next';
+    document.getElementById('btn-mode-next').classList.add('active');
+    document.getElementById('btn-mode-prev').classList.remove('active');
+    startSolitaireGame();
+  });
+  
+  document.getElementById('btn-mode-prev').addEventListener('click', () => {
+    solitaireGameState.mode = 'prev';
+    document.getElementById('btn-mode-prev').classList.add('active');
+    document.getElementById('btn-mode-next').classList.remove('active');
+    startSolitaireGame();
+  });
+  
+  // 绑定提交和提示按钮事件
+  document.getElementById('btn-solitaire-submit').addEventListener('click', submitSolitaireAnswer);
+  document.getElementById('btn-solitaire-hint').addEventListener('click', showSolitaireHint);
+  
+  // 绑定回车键提交
+  document.getElementById('solitaire-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      submitSolitaireAnswer();
+    }
+  });
+  
+  // 初始开始游戏
+  startSolitaireGame();
+}
+
+// 开始诗词接龙游戏
+async function startSolitaireGame() {
+  const statusEl = document.getElementById('solitaire-status');
+  const questionEl = document.getElementById('solitaire-question');
+  const scoreEl = document.getElementById('solitaire-score');
+  
+  statusEl.innerHTML = '<p>加载中...</p>';
+  questionEl.innerHTML = '';
+  
+  try {
+    // 获取诗词数据
+    const res = await fetch(`${API_BASE}/api/poems/search`);
+    const json = await res.json();
+    
+    if (!json.success || !json.data || json.data.length === 0) {
+      statusEl.innerHTML = '<p class="empty">未找到诗词数据</p>';
+      return;
+    }
+    
+    // 过滤出有足够行数的诗词（至少2句）
+    const validPoems = json.data.filter(poem => {
+      const lines = formatContent(poem.content).split('\n').filter(line => line.trim());
+      return lines.length >= 2;
+    });
+    
+    if (validPoems.length === 0) {
+      statusEl.innerHTML = '<p class="empty">未找到合适的诗词</p>';
+      return;
+    }
+    
+    // 随机选择一首未使用的诗词
+    let selectedPoem;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    do {
+      const randomIndex = Math.floor(Math.random() * validPoems.length);
+      selectedPoem = validPoems[randomIndex];
+      attempts++;
+    } while (solitaireGameState.usedPoems.has(selectedPoem.title) && attempts < maxAttempts);
+    
+    // 如果所有诗词都已使用，重置使用记录
+    if (attempts >= maxAttempts) {
+      solitaireGameState.usedPoems.clear();
+      const randomIndex = Math.floor(Math.random() * validPoems.length);
+      selectedPoem = validPoems[randomIndex];
+    }
+    
+    // 添加到已使用集合
+    solitaireGameState.usedPoems.add(selectedPoem.title);
+    solitaireGameState.currentPoem = selectedPoem;
+    
+    // 分割诗词为行
+    const lines = formatContent(selectedPoem.content).split('\n').filter(line => line.trim());
+    
+    // 随机选择一个位置（不是第一句或最后一句，除非诗词只有2句）
+    let index;
+    if (lines.length === 2) {
+      index = 0;
+    } else {
+      index = Math.floor(Math.random() * (lines.length - 1));
+    }
+    
+    solitaireGameState.currentIndex = index;
+    
+    // 生成题目
+    if (solitaireGameState.mode === 'next') {
+      // 上句接下句
+      statusEl.innerHTML = `<h4>诗词接龙 - 上句接下句</h4><p>请接出下一句：</p>`;
+      questionEl.innerHTML = `
+        <div class="question-poem">
+          <div class="poem-meta">${escapeHtml(selectedPoem.author)} · 《${escapeHtml(selectedPoem.title)}》</div>
+          <div class="poem-line">${escapeHtml(lines[index])}</div>
+          <div class="poem-line blank">__________</div>
+        </div>
+      `;
+    } else {
+      // 下句猜上句
+      statusEl.innerHTML = `<h4>诗词接龙 - 下句猜上句</h4><p>请猜出上一句：</p>`;
+      questionEl.innerHTML = `
+        <div class="question-poem">
+          <div class="poem-meta">${escapeHtml(selectedPoem.author)} · 《${escapeHtml(selectedPoem.title)}》</div>
+          <div class="poem-line blank">__________</div>
+          <div class="poem-line">${escapeHtml(lines[index + 1])}</div>
+        </div>
+      `;
+    }
+    
+    // 清空输入框
+    document.getElementById('solitaire-input').value = '';
+    
+    // 更新分数
+    scoreEl.textContent = `得分：${solitaireGameState.score}`;
+    
+  } catch (error) {
+    console.error('加载诗词失败:', error);
+    statusEl.innerHTML = '<p class="empty">加载失败</p>';
+  }
+}
+
+// 提交诗词接龙答案
+function submitSolitaireAnswer() {
+  const userInput = document.getElementById('solitaire-input').value.trim();
+  const statusEl = document.getElementById('solitaire-status');
+  const questionEl = document.getElementById('solitaire-question');
+  
+  if (!userInput) {
+    showAlert('请输入答案');
+    return;
+  }
+  
+  const poem = solitaireGameState.currentPoem;
+  const lines = formatContent(poem.content).split('\n').filter(line => line.trim());
+  const index = solitaireGameState.currentIndex;
+  
+  let correctAnswer;
+  if (solitaireGameState.mode === 'next') {
+    correctAnswer = lines[index + 1];
+  } else {
+    correctAnswer = lines[index];
+  }
+  
+  // 比较答案（忽略标点符号）
+  const userAnswerNoPunc = removePunctuation(userInput);
+  const correctAnswerNoPunc = removePunctuation(correctAnswer);
+  
+  if (userAnswerNoPunc === correctAnswerNoPunc) {
+    // 答案正确
+    solitaireGameState.score += 10;
+    showAlert('回答正确！加10分');
+    setTimeout(startSolitaireGame, 1000);
+  } else {
+    // 答案错误
+    showAlert(`回答错误！正确答案是：${correctAnswer}`);
+    // 显示正确答案后继续游戏
+    setTimeout(startSolitaireGame, 1000);
+  }
+}
+
+// 显示诗词接龙提示
+function showSolitaireHint() {
+  const poem = solitaireGameState.currentPoem;
+  const lines = formatContent(poem.content).split('\n').filter(line => line.trim());
+  const index = solitaireGameState.currentIndex;
+  
+  let correctAnswer;
+  if (solitaireGameState.mode === 'next') {
+    correctAnswer = lines[index + 1];
+  } else {
+    correctAnswer = lines[index];
+  }
+  
+  // 显示提示（显示前两个字）
+  const hint = correctAnswer.substring(0, 2) + '...';
+  showAlert(`提示：${hint}`);
+}
+
+// 页面加载时初始化诗词接龙
+window.addEventListener('load', () => {
+  // 初始化诗词接龙游戏
+  const solitaireSection = document.getElementById('solitaire');
+  if (solitaireSection) {
+    initSolitaire();
+  }
+});
 
 // 诗词详情弹窗
 async function showPoemDetail(title) {
@@ -360,17 +1298,102 @@ async function showPoemDetail(title) {
     detail.innerHTML = '<p>未找到该诗词</p>';
   } else {
     const p = json.data;
+    
+    // 生成诗词介绍（300字左右）
+    let introduction = `《${p.title}》是${p.dynasty}诗人${p.author}的代表作之一。`;
+    if (p.background) {
+      introduction += ` ${p.background}`;
+    } else {
+      introduction += ` 此诗创作于${p.dynasty}时期，是诗人的经典作品。`;
+    }
+    if (p.emotion) {
+      introduction += ` ${p.emotion}`;
+    } else {
+      introduction += ` 诗中表达了诗人对生活的感悟和对美好事物的向往。`;
+    }
+    if (p.allusion) {
+      introduction += ` ${p.allusion}`;
+    } else {
+      introduction += ` 诗中运用了丰富的意象，展现了中国古典诗歌的独特魅力。`;
+    }
+    
+    // 确保介绍长度在300字左右
+    if (introduction.length < 200) {
+      introduction += ` 全诗语言凝练，意境深远，结构严谨，韵律和谐，千百年来一直为人们所传诵，成为中国古典文学的经典之作。`;
+    }
+    if (introduction.length > 400) {
+      introduction = introduction.substring(0, 350) + '...';
+    }
+    
+    // 关键名词列表（扩展版）
+    const keyTerms = [
+      { term: '明月', explanation: '明月是中国古典诗歌中常见的意象，常象征团圆、思乡之情。' },
+      { term: '夕阳', explanation: '夕阳常象征时光流逝、人生迟暮，也可表达离别的伤感。' },
+      { term: '春风', explanation: '春风象征生机、希望和温暖，常用来表现春天的到来。' },
+      { term: '秋霜', explanation: '秋霜象征寒冷、孤寂，常用来表达悲伤或高洁的品质。' },
+      { term: '孤帆', explanation: '孤帆象征孤独、漂泊，常用来表达离别的伤感或游子的思乡之情。' },
+      { term: '归雁', explanation: '归雁象征思乡、归期，常用来表达对家乡的思念。' },
+      { term: '落花', explanation: '落花象征美好事物的消逝，常用来表达伤春之情。' },
+      { term: '流水', explanation: '流水象征时光流逝、生命短暂，也可表达绵绵不绝的情感。' },
+      { term: '青山', explanation: '青山常象征坚韧、永恒，也可表达归隐之情。' },
+      { term: '白云', explanation: '白云象征自由、高洁，常用来表达超脱世俗的情怀。' },
+      { term: '芳草', explanation: '芳草常象征离情别绪，也可表达春天的生机。' },
+      { term: '梧桐', explanation: '梧桐常象征孤独、悲伤，尤其在秋雨梧桐的场景中。' },
+      { term: '杜鹃', explanation: '杜鹃鸟的啼声常象征哀怨、思归之情。' },
+      { term: '菊花', explanation: '菊花象征高洁、隐逸，常用来表达诗人的品格。' },
+      { term: '梅花', explanation: '梅花象征坚韧、高洁，常用来表达诗人的品格。' },
+      { term: '竹子', explanation: '竹子象征高洁、坚韧，常用来表达诗人的品格。' },
+      { term: '莲花', explanation: '莲花象征高洁、纯净，常用来表达诗人的品格。' },
+      { term: '饮酒', explanation: '饮酒常用来表达诗人的洒脱、豪放之情。' },
+      { term: '登高', explanation: '登高常用来表达诗人的壮志豪情或思乡之情。' },
+      { term: '望远', explanation: '望远常用来表达诗人的思乡之情或对未来的期待。' }
+    ];
+    
+    // 高亮诗词中的关键名词
+    let highlightedContent = escapeHtml(formatContent(p.content));
+    let highlightedCount = 0;
+    
+    keyTerms.forEach(item => {
+      if (highlightedContent.includes(item.term)) {
+        const regex = new RegExp(`(${item.term})`, 'g');
+        highlightedContent = highlightedContent.replace(regex, `<span class="key-term" data-term="${item.term}" data-explanation="${escapeHtml(item.explanation)}">$1</span>`);
+        highlightedCount++;
+      }
+    });
+    
+    // 如果高亮的关键词少于3个，添加一些通用的关键词
+    if (highlightedCount < 3) {
+      // 检查是否有其他常见的关键词
+      const commonTerms = [
+        { term: '人生', explanation: '人生是诗歌中常见的主题，常用来表达对生命意义的思考。' },
+        { term: '青春', explanation: '青春象征美好时光，常用来表达对时光流逝的感慨。' },
+        { term: '故乡', explanation: '故乡是诗歌中常见的主题，常用来表达思乡之情。' },
+        { term: '友情', explanation: '友情是诗歌中常见的主题，常用来表达朋友之间的深厚感情。' },
+        { term: '爱情', explanation: '爱情是诗歌中常见的主题，常用来表达男女之间的深情。' }
+      ];
+      
+      commonTerms.forEach(item => {
+        if (highlightedContent.includes(item.term) && highlightedCount < 3) {
+          const regex = new RegExp(`(${item.term})`, 'g');
+          highlightedContent = highlightedContent.replace(regex, `<span class="key-term" data-term="${item.term}" data-explanation="${escapeHtml(item.explanation)}">$1</span>`);
+          highlightedCount++;
+        }
+      });
+    }
+    
     let html = `
       <div class="detail-title">《${escapeHtml(p.title)}》</div>
       <div class="detail-meta">${escapeHtml(p.author)} · ${escapeHtml(p.dynasty)} · ${escapeHtml(p.tag || '')}</div>
       <div class="detail-section">
+        <h4>诗词介绍</h4>
+        <p>${escapeHtml(introduction)}</p>
+      </div>
+      <div class="detail-section">
         <h4>原文</h4>
-        <div class="detail-content">${escapeHtml(formatContent(p.content))}</div>
+        <div class="detail-content">${highlightedContent}</div>
+        <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">注：点击诗中高亮的关键名词查看解释</p>
       </div>
     `;
-    if (p.annotation) {
-      html += `<div class="detail-section"><h4>注释</h4><p>${escapeHtml(p.annotation)}</p></div>`;
-    }
     if (p.translation) {
       html += `<div class="detail-section"><h4>译文</h4><p>${escapeHtml(p.translation)}</p></div>`;
     }
@@ -383,9 +1406,557 @@ async function showPoemDetail(title) {
     if (p.allusion) {
       html += `<div class="detail-section"><h4>典故意象</h4><p>${escapeHtml(p.allusion)}</p></div>`;
     }
+    
+    // 添加背诵默写功能
+    html += `
+      <div class="detail-section">
+        <h4>背诵默写</h4>
+        <div class="recite-buttons" style="display: flex; gap: 1rem; margin-top: 1rem;">
+          <button class="btn btn-primary" id="btn-recite-this" data-title="${escapeHtml(p.title)}" data-author="${escapeHtml(p.author)}" data-dynasty="${escapeHtml(p.dynasty)}" data-content="${escapeHtml(p.content)}">整首默写</button>
+          <button class="btn btn-secondary" id="btn-dictation-this" data-title="${escapeHtml(p.title)}" data-author="${escapeHtml(p.author)}" data-dynasty="${escapeHtml(p.dynasty)}" data-content="${escapeHtml(p.content)}">填空默写</button>
+        </div>
+        <div class="recite-result" id="recite-result-this" style="margin-top: 1rem; display: none;"></div>
+      </div>
+    `;
     detail.innerHTML = html;
+    
+    // 添加关键名词点击事件
+    setTimeout(() => {
+      document.querySelectorAll('.key-term').forEach(term => {
+        term.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const termText = term.dataset.term;
+          const explanation = term.dataset.explanation;
+          showTermExplanation(termText, explanation);
+        });
+      });
+      
+      // 添加背诵默写按钮事件
+      const btnReciteThis = document.getElementById('btn-recite-this');
+      const btnDictationThis = document.getElementById('btn-dictation-this');
+      const reciteResultThis = document.getElementById('recite-result-this');
+      
+      if (btnReciteThis) {
+        btnReciteThis.addEventListener('click', () => {
+          const poemData = {
+            title: btnReciteThis.dataset.title,
+            author: btnReciteThis.dataset.author,
+            dynasty: btnReciteThis.dataset.dynasty,
+            content: btnReciteThis.dataset.content
+          };
+          startReciteThis(poemData, reciteResultThis);
+        });
+      }
+      
+      if (btnDictationThis) {
+        btnDictationThis.addEventListener('click', () => {
+          const poemData = {
+            title: btnDictationThis.dataset.title,
+            author: btnDictationThis.dataset.author,
+            dynasty: btnDictationThis.dataset.dynasty,
+            content: btnDictationThis.dataset.content
+          };
+          startDictationThis(poemData, reciteResultThis);
+        });
+      }
+    }, 100);
   }
   modal.classList.add('active');
+}
+
+// 显示名词解释弹窗
+function showTermExplanation(term, explanation) {
+  // 检查是否已有解释弹窗
+  let modal = document.getElementById('term-modal');
+  let termTitle, termExplanation, termModalClose;
+  
+  if (!modal) {
+    // 创建解释弹窗
+    modal = document.createElement('div');
+    modal.id = 'term-modal';
+    modal.className = 'modal';
+    modal.style.zIndex = '1001';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 400px;">
+        <button class="modal-close" id="term-modal-close">×</button>
+        <div class="term-detail">
+          <h4 id="term-title"></h4>
+          <p id="term-explanation"></p>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // 获取弹窗内的元素
+    termTitle = modal.querySelector('#term-title');
+    termExplanation = modal.querySelector('#term-explanation');
+    termModalClose = modal.querySelector('#term-modal-close');
+    
+    // 存储元素引用
+    modal._elements = {
+      termTitle: termTitle,
+      termExplanation: termExplanation,
+      termModalClose: termModalClose
+    };
+    
+    // 添加关闭事件
+    termModalClose.addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target.id === 'term-modal') {
+        modal.classList.remove('active');
+      }
+    });
+  } else {
+    // 从存储的引用中获取元素
+    termTitle = modal._elements.termTitle;
+    termExplanation = modal._elements.termExplanation;
+  }
+  
+  // 填充内容
+  termTitle.textContent = term;
+  termExplanation.textContent = explanation;
+  
+  // 显示弹窗
+  modal.classList.add('active');
+}
+
+// 显示诗人详情弹窗
+async function showPoetDetail(author) {
+  const modal = document.getElementById('poet-modal');
+  const detail = document.getElementById('poet-detail');
+  
+  // 显示加载状态
+  detail.innerHTML = '<p class="empty">加载中...</p>';
+  modal.classList.add('active');
+  
+  try {
+    // 获取诗人的作品
+    const poemsRes = await fetch(`${API_BASE}/api/poems/search?author=${encodeURIComponent(author)}`);
+    const poemsJson = await poemsRes.json();
+    
+    if (!poemsJson.success || !poemsJson.data || poemsJson.data.length === 0) {
+      detail.innerHTML = '<p>未找到该诗人的信息</p>';
+      return;
+    }
+    
+    const poems = poemsJson.data;
+    const poetInfo = poems[0];
+    const dynasty = poetInfo.dynasty || '未知朝代';
+    const poemCount = poems.length;
+    
+    // 生成诗人介绍
+    let poetBio = `${author}（约${dynasty}时期），中国古代著名诗人。`;
+    poetBio += ` 其作品题材广泛，风格独特，在中国文学史上占有重要地位。`;
+    poetBio += ` 一生创作了大量诗词，题材涵盖山水、田园、边塞、思乡等多个方面，`;
+    poetBio += ` 其作品语言凝练，意境深远，对后世文学产生了深远影响。`;
+    
+    // 生成诗人详情HTML
+    let html = `
+      <div class="poet-header">
+        <h2 class="poet-name">${escapeHtml(author)}</h2>
+        <p class="poet-meta">${escapeHtml(dynasty)} · 共 ${poemCount} 首诗词</p>
+        <div class="poet-bio">${escapeHtml(poetBio)}</div>
+      </div>
+      
+      <div class="tab-buttons">
+        <button class="tab-btn active" data-tab="works">代表作品</button>
+        <button class="tab-btn" data-tab="graph">知识图谱</button>
+        <button class="tab-btn" data-tab="trajectory">诗人行迹</button>
+      </div>
+      
+      <div class="tab-content active" id="tab-works">
+        <h3 class="section-title">代表作品</h3>
+        <div class="poet-works">
+          ${poems.slice(0, 6).map(p => `
+            <div class="work-item" data-title="${escapeHtml(p.title)}" data-author="${escapeHtml(author)}">
+              <div class="work-title">《${escapeHtml(p.title)}》</div>
+              <div class="work-preview">${escapeHtml((p.content || '').slice(0, 100))}...</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      
+      <div class="tab-content" id="tab-graph">
+        <h3 class="section-title">知识图谱</h3>
+        <div class="chart-container" id="poet-knowledge-graph"></div>
+      </div>
+      
+      <div class="tab-content" id="tab-trajectory">
+        <h3 class="section-title">诗人行迹</h3>
+        <div class="chart-container" id="poet-trajectory-chart"></div>
+      </div>
+    `;
+    
+    detail.innerHTML = html;
+    
+    // 添加标签页切换事件
+    detail.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        detail.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        detail.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        
+        // 加载知识图谱
+        if (tab === 'graph') {
+          setTimeout(() => loadPoetKnowledgeGraph(author), 100);
+        }
+        
+        // 加载诗人行迹
+        if (tab === 'trajectory') {
+          setTimeout(() => loadPoetTrajectory(author), 100);
+        }
+      });
+    });
+    
+    // 添加作品点击事件
+    detail.querySelectorAll('.work-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const title = item.dataset.title;
+        const authorName = item.dataset.author;
+        // 关闭诗人弹窗
+        modal.classList.remove('active');
+        // 跳转到诗词页面并传递诗人信息
+        showPoemDetailWithBack(title, authorName);
+      });
+    });
+    
+  } catch (error) {
+    console.error('加载诗人详情失败:', error);
+    detail.innerHTML = '<p>加载失败，请稍后重试</p>';
+  }
+}
+
+// 显示诗词详情弹窗（带返回按钮）
+async function showPoemDetailWithBack(title, author) {
+  const res = await fetch(`${API_BASE}/api/poems/detail?title=${encodeURIComponent(title)}`);
+  const json = await res.json();
+  const modal = document.getElementById('poem-modal');
+  const detail = document.getElementById('poem-detail');
+
+  if (!json.success || !json.data) {
+    detail.innerHTML = '<p>未找到该诗词</p>';
+  } else {
+    const p = json.data;
+    
+    // 生成诗词介绍（300字左右）
+    let introduction = `《${p.title}》是${p.dynasty}诗人${p.author}的代表作之一。`;
+    if (p.background) {
+      introduction += ` ${p.background}`;
+    } else {
+      introduction += ` 此诗创作于${p.dynasty}时期，是诗人的经典作品。`;
+    }
+    if (p.emotion) {
+      introduction += ` ${p.emotion}`;
+    } else {
+      introduction += ` 诗中表达了诗人对生活的感悟和对美好事物的向往。`;
+    }
+    if (p.allusion) {
+      introduction += ` ${p.allusion}`;
+    } else {
+      introduction += ` 诗中运用了丰富的意象，展现了中国古典诗歌的独特魅力。`;
+    }
+    
+    // 确保介绍长度在300字左右
+    if (introduction.length < 200) {
+      introduction += ` 全诗语言凝练，意境深远，结构严谨，韵律和谐，千百年来一直为人们所传诵，成为中国古典文学的经典之作。`;
+    }
+    if (introduction.length > 400) {
+      introduction = introduction.substring(0, 350) + '...';
+    }
+    
+    // 关键名词列表（扩展版）
+    const keyTerms = [
+      { term: '明月', explanation: '明月是中国古典诗歌中常见的意象，常象征团圆、思乡之情。' },
+      { term: '夕阳', explanation: '夕阳常象征时光流逝、人生迟暮，也可表达离别的伤感。' },
+      { term: '春风', explanation: '春风象征生机、希望和温暖，常用来表现春天的到来。' },
+      { term: '秋霜', explanation: '秋霜象征寒冷、孤寂，常用来表达悲伤或高洁的品质。' },
+      { term: '孤帆', explanation: '孤帆象征孤独、漂泊，常用来表达离别的伤感或游子的思乡之情。' },
+      { term: '归雁', explanation: '归雁象征思乡、归期，常用来表达对家乡的思念。' },
+      { term: '落花', explanation: '落花象征美好事物的消逝，常用来表达伤春之情。' },
+      { term: '流水', explanation: '流水象征时光流逝、生命短暂，也可表达绵绵不绝的情感。' },
+      { term: '青山', explanation: '青山常象征坚韧、永恒，也可表达归隐之情。' },
+      { term: '白云', explanation: '白云象征自由、高洁，常用来表达超脱世俗的情怀。' },
+      { term: '芳草', explanation: '芳草常象征离情别绪，也可表达春天的生机。' },
+      { term: '梧桐', explanation: '梧桐常象征孤独、悲伤，尤其在秋雨梧桐的场景中。' },
+      { term: '杜鹃', explanation: '杜鹃鸟的啼声常象征哀怨、思归之情。' },
+      { term: '菊花', explanation: '菊花象征高洁、隐逸，常用来表达诗人的品格。' },
+      { term: '梅花', explanation: '梅花象征坚韧、高洁，常用来表达诗人的品格。' },
+      { term: '竹子', explanation: '竹子象征高洁、坚韧，常用来表达诗人的品格。' },
+      { term: '莲花', explanation: '莲花象征高洁、纯净，常用来表达诗人的品格。' },
+      { term: '饮酒', explanation: '饮酒常用来表达诗人的洒脱、豪放之情。' },
+      { term: '登高', explanation: '登高常用来表达诗人的壮志豪情或思乡之情。' },
+      { term: '望远', explanation: '望远常用来表达诗人的思乡之情或对未来的期待。' }
+    ];
+    
+    // 高亮诗词中的关键名词
+    let highlightedContent = escapeHtml(formatContent(p.content));
+    let highlightedCount = 0;
+    
+    keyTerms.forEach(item => {
+      if (highlightedContent.includes(item.term)) {
+        const regex = new RegExp(`(${item.term})`, 'g');
+        highlightedContent = highlightedContent.replace(regex, `<span class="key-term" data-term="${item.term}" data-explanation="${escapeHtml(item.explanation)}">$1</span>`);
+        highlightedCount++;
+      }
+    });
+    
+    // 如果高亮的关键词少于3个，添加一些通用的关键词
+    if (highlightedCount < 3) {
+      // 检查是否有其他常见的关键词
+      const commonTerms = [
+        { term: '人生', explanation: '人生是诗歌中常见的主题，常用来表达对生命意义的思考。' },
+        { term: '青春', explanation: '青春象征美好时光，常用来表达对时光流逝的感慨。' },
+        { term: '故乡', explanation: '故乡是诗歌中常见的主题，常用来表达思乡之情。' },
+        { term: '友情', explanation: '友情是诗歌中常见的主题，常用来表达朋友之间的深厚感情。' },
+        { term: '爱情', explanation: '爱情是诗歌中常见的主题，常用来表达男女之间的深情。' }
+      ];
+      
+      commonTerms.forEach(item => {
+        if (highlightedContent.includes(item.term) && highlightedCount < 3) {
+          const regex = new RegExp(`(${item.term})`, 'g');
+          highlightedContent = highlightedContent.replace(regex, `<span class="key-term" data-term="${item.term}" data-explanation="${escapeHtml(item.explanation)}">$1</span>`);
+          highlightedCount++;
+        }
+      });
+    }
+    
+    let html = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 class="detail-title">《${escapeHtml(p.title)}》</h3>
+        <button class="btn btn-secondary" id="back-to-poet" data-author="${escapeHtml(author)}">返回诗人页</button>
+      </div>
+      <div class="detail-meta">${escapeHtml(p.author)} · ${escapeHtml(p.dynasty)} · ${escapeHtml(p.tag || '')}</div>
+      <div class="detail-section">
+        <h4>诗词介绍</h4>
+        <p>${escapeHtml(introduction)}</p>
+      </div>
+      <div class="detail-section">
+        <h4>原文</h4>
+        <div class="detail-content">${highlightedContent}</div>
+        <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">注：点击诗中高亮的关键名词查看解释</p>
+      </div>
+    `;
+    if (p.translation) {
+      html += `<div class="detail-section"><h4>译文</h4><p>${escapeHtml(p.translation)}</p></div>`;
+    }
+    if (p.background) {
+      html += `<div class="detail-section"><h4>创作背景</h4><p>${escapeHtml(p.background)}</p></div>`;
+    }
+    if (p.emotion) {
+      html += `<div class="detail-section"><h4>情感主旨</h4><p>${escapeHtml(p.emotion)}</p></div>`;
+    }
+    if (p.allusion) {
+      html += `<div class="detail-section"><h4>典故意象</h4><p>${escapeHtml(p.allusion)}</p></div>`;
+    }
+    
+    // 添加背诵默写功能
+    html += `
+      <div class="detail-section">
+        <h4>背诵默写</h4>
+        <div class="recite-buttons" style="display: flex; gap: 1rem; margin-top: 1rem;">
+          <button class="btn btn-primary" id="btn-recite-this" data-title="${escapeHtml(p.title)}" data-author="${escapeHtml(p.author)}" data-dynasty="${escapeHtml(p.dynasty)}" data-content="${escapeHtml(p.content)}">整首默写</button>
+          <button class="btn btn-secondary" id="btn-dictation-this" data-title="${escapeHtml(p.title)}" data-author="${escapeHtml(p.author)}" data-dynasty="${escapeHtml(p.dynasty)}" data-content="${escapeHtml(p.content)}">填空默写</button>
+        </div>
+        <div class="recite-result" id="recite-result-this" style="margin-top: 1rem; display: none;"></div>
+      </div>
+    `;
+    detail.innerHTML = html;
+    
+    // 添加关键名词点击事件
+    setTimeout(() => {
+      document.querySelectorAll('.key-term').forEach(term => {
+        term.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const termText = term.dataset.term;
+          const explanation = term.dataset.explanation;
+          showTermExplanation(termText, explanation);
+        });
+      });
+      
+      // 添加背诵默写按钮事件
+      const btnReciteThis = document.getElementById('btn-recite-this');
+      const btnDictationThis = document.getElementById('btn-dictation-this');
+      const reciteResultThis = document.getElementById('recite-result-this');
+      
+      if (btnReciteThis) {
+        btnReciteThis.addEventListener('click', () => {
+          const poemData = {
+            title: btnReciteThis.dataset.title,
+            author: btnReciteThis.dataset.author,
+            dynasty: btnReciteThis.dataset.dynasty,
+            content: btnReciteThis.dataset.content
+          };
+          startReciteThis(poemData, reciteResultThis);
+        });
+      }
+      
+      if (btnDictationThis) {
+        btnDictationThis.addEventListener('click', () => {
+          const poemData = {
+            title: btnDictationThis.dataset.title,
+            author: btnDictationThis.dataset.author,
+            dynasty: btnDictationThis.dataset.dynasty,
+            content: btnDictationThis.dataset.content
+          };
+          startDictationThis(poemData, reciteResultThis);
+        });
+      }
+    }, 100);
+    
+    // 添加返回按钮事件
+    setTimeout(() => {
+      const backBtn = document.getElementById('back-to-poet');
+      if (backBtn) {
+        backBtn.addEventListener('click', () => {
+          modal.classList.remove('active');
+          showPoetDetail(backBtn.dataset.author);
+        });
+      }
+    }, 100);
+  }
+  modal.classList.add('active');
+}
+
+// 加载诗人知识图谱
+function loadPoetKnowledgeGraph(author) {
+  const chartDom = document.getElementById('poet-knowledge-graph');
+  if (!chartDom) return;
+  
+  const myChart = echarts.init(chartDom);
+  
+  // 模拟诗人知识图谱数据
+  const option = {
+    title: {
+      text: `${author} 知识图谱`,
+      left: 'center'
+    },
+    tooltip: {},
+    animationDurationUpdate: 1500,
+    animationEasingUpdate: 'quinticInOut',
+    series: [{
+      type: 'graph',
+      layout: 'force',
+      force: {
+        repulsion: 100,
+        edgeLength: 80
+      },
+      roam: true,
+      label: {
+        show: true
+      },
+      data: [
+        { name: author, category: 0, symbolSize: 50 },
+        { name: '唐诗', category: 1 },
+        { name: '宋词', category: 1 },
+        { name: '山水诗', category: 2 },
+        { name: '田园诗', category: 2 },
+        { name: '边塞诗', category: 2 },
+        { name: '思乡诗', category: 2 },
+        { name: '李白', category: 0 },
+        { name: '杜甫', category: 0 }
+      ],
+      links: [
+        { source: author, target: '唐诗' },
+        { source: author, target: '山水诗' },
+        { source: author, target: '田园诗' },
+        { source: author, target: '李白' },
+        { source: author, target: '杜甫' }
+      ],
+      categories: [
+        { name: '诗人' },
+        { name: '朝代' },
+        { name: '题材' }
+      ]
+    }]
+  };
+  
+  myChart.setOption(option);
+  
+  // 响应式调整
+  window.addEventListener('resize', () => {
+    myChart.resize();
+  });
+}
+
+// 加载诗人行迹
+function loadPoetTrajectory(author) {
+  const chartDom = document.getElementById('poet-trajectory-chart');
+  if (!chartDom) return;
+  
+  const myChart = echarts.init(chartDom);
+  
+  // 模拟诗人行迹数据
+  const option = {
+    title: {
+      text: `${author} 行迹地图`,
+      left: 'center'
+    },
+    tooltip: {
+      trigger: 'item'
+    },
+    visualMap: {
+      min: 0,
+      max: 10,
+      left: 'left',
+      top: 'bottom',
+      text: ['高', '低'],
+      calculable: true
+    },
+    series: [{
+      name: '行迹',
+      type: 'scatter',
+      coordinateSystem: 'geo',
+      data: [
+        { name: '长安', value: [108.94, 34.34, 8] },
+        { name: '洛阳', value: [112.98, 34.76, 6] },
+        { name: '金陵', value: [118.78, 32.06, 5] },
+        { name: '杭州', value: [120.15, 30.27, 7] },
+        { name: '成都', value: [104.07, 30.67, 4] }
+      ],
+      symbolSize: function(val) {
+        return val[2] * 5;
+      },
+      label: {
+        show: true,
+        formatter: '{b}'
+      },
+      emphasis: {
+        label: {
+          show: true
+        }
+      }
+    }],
+    geo: {
+      map: 'china',
+      roam: true,
+      label: {
+        emphasis: {
+          show: false
+        }
+      },
+      itemStyle: {
+        normal: {
+          areaColor: '#f3f3f3',
+          borderColor: '#999'
+        },
+        emphasis: {
+          areaColor: '#e6f7ff'
+        }
+      }
+    }
+  };
+  
+  myChart.setOption(option);
+  
+  // 响应式调整
+  window.addEventListener('resize', () => {
+    myChart.resize();
+  });
 }
 window.showPoemDetail = showPoemDetail;
 
@@ -396,6 +1967,38 @@ document.getElementById('modal-close').addEventListener('click', () => {
 document.getElementById('poem-modal').addEventListener('click', (e) => {
   if (e.target.id === 'poem-modal') e.target.classList.remove('active');
 });
+
+// 诗人弹窗关闭事件
+document.getElementById('poet-modal-close').addEventListener('click', () => {
+  document.getElementById('poet-modal').classList.remove('active');
+});
+
+document.getElementById('poet-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'poet-modal') e.target.classList.remove('active');
+});
+
+// 回到顶部按钮功能
+function initBackToTop() {
+  const backToTopBtn = document.getElementById('back-to-top');
+  if (!backToTopBtn) return;
+  
+  // 监听页面滚动事件
+  window.addEventListener('scroll', () => {
+    if (window.pageYOffset > 300) {
+      backToTopBtn.classList.add('active');
+    } else {
+      backToTopBtn.classList.remove('active');
+    }
+  });
+  
+  // 点击按钮回到顶部
+  backToTopBtn.addEventListener('click', () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  });
+}
 
 // 工具函数
 function escapeHtml(s) {
@@ -413,4 +2016,258 @@ function formatContent(content) {
     .replace(/？/g, '？\n')
     .replace(/！/g, '！\n')
     .replace(/；/g, '；\n');
+}
+
+// 开始整首默写（针对当前诗词）
+function startReciteThis(poemData, resultContainer) {
+  // 显示默写界面
+  resultContainer.style.display = 'block';
+  
+  // 按行分割内容
+  const lines = formatContent(poemData.content).split('\n').filter(line => line.trim());
+  let inputHtml = '';
+  
+  // 为每行创建一个输入框
+  lines.forEach((line, index) => {
+    const inputId = `recite-line-${Date.now()}-${index}`;
+    inputHtml += `
+      <div style="margin-bottom: 0.8rem;">
+        <input type="text" class="dictation-line-input" id="${inputId}" placeholder="请输入第${index + 1}行" style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px; font-family: 'Noto Serif SC', serif; font-size: 1rem;">
+      </div>
+    `;
+  });
+
+  resultContainer.innerHTML = `
+    <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px;">
+      <h4 style="margin-bottom: 1rem;">默写：《${escapeHtml(poemData.title)}》</h4>
+      <div class="poem-meta" style="margin-bottom: 1.5rem;">${escapeHtml(poemData.author)} · ${escapeHtml(poemData.dynasty)}</div>
+      <div style="margin-bottom: 1.5rem;">
+        ${inputHtml}
+      </div>
+      <button class="btn btn-primary" id="btn-submit-recite-this" data-title="${escapeHtml(poemData.title)}" data-content="${escapeHtml(poemData.content)}">提交答案</button>
+    </div>
+  `;
+  
+  // 添加提交按钮事件
+  const submitBtn = document.getElementById('btn-submit-recite-this');
+  if (submitBtn) {
+    submitBtn.addEventListener('click', () => {
+      const originalContent = submitBtn.dataset.content;
+      submitReciteThis(resultContainer, originalContent);
+    });
+  }
+}
+
+// 提交整首默写答案
+function submitReciteThis(container, originalContent) {
+  // 获取用户输入
+  const inputs = container.querySelectorAll('.dictation-line-input');
+  const userLines = Array.from(inputs).map(input => input.value.trim());
+  
+  // 按行分割原始内容
+  const originalLines = formatContent(originalContent).split('\n').filter(line => line.trim());
+  
+  // 提取原始内容中的所有汉字（不包括标点和换行）
+  const originalChars = originalContent.split('');
+  const originalWords = [];
+  
+  for (let i = 0; i < originalChars.length; i++) {
+    if (!originalChars[i].match(/[，。；：？！\n]/)) {
+      originalWords.push(originalChars[i]);
+    }
+  }
+  
+  // 提取用户输入中的所有汉字
+  let userWords = [];
+  userLines.forEach(line => {
+    const lineChars = line.split('');
+    lineChars.forEach(char => {
+      if (!char.match(/[，。；：？！\n]/)) {
+        userWords.push(char);
+      }
+    });
+  });
+  
+  // 生成对比结果
+  let comparisonHtml = '';
+  let inputIndex = 0;
+  
+  for (let i = 0; i < originalChars.length; i++) {
+    const char = originalChars[i];
+    if (char.match(/[，。；：？！\n]/)) {
+      comparisonHtml += char;
+    } else {
+      const userAnswer = userWords[inputIndex] || '';
+      const isCorrect = userAnswer === originalWords[inputIndex];
+      comparisonHtml += isCorrect 
+        ? `<span style="color: green; font-weight: bold;">${escapeHtml(userAnswer || '_')}</span>`
+        : `<span style="color: red; font-weight: bold;">${escapeHtml(userAnswer || '_')}</span>`;
+      inputIndex++;
+    }
+  }
+  
+  // 计算正确率
+  let correctCount = 0;
+  for (let i = 0; i < Math.min(userWords.length, originalWords.length); i++) {
+    if (userWords[i] === originalWords[i]) {
+      correctCount++;
+    }
+  }
+  
+  // 显示结果
+  container.innerHTML = `
+    <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px;">
+      <h4 style="margin-bottom: 1rem;">默写结果</h4>
+      <p style="margin-bottom: 1rem;">答对 ${correctCount} 题，共 ${originalWords.length} 题</p>
+      <p style="margin-bottom: 0.5rem; font-weight: 600;">您的答案：</p>
+      <div class="poem-text" style="margin-bottom: 1.5rem;">${comparisonHtml}</div>
+      <p style="margin-bottom: 0.5rem; font-weight: 600;">参考答案：</p>
+      <div class="poem-text" style="margin-bottom: 1.5rem;">${escapeHtml(formatContent(originalContent))}</div>
+      <button class="btn btn-secondary" id="btn-reset-recite-this">重新默写</button>
+    </div>
+  `;
+  
+  // 添加重新默写按钮事件
+  const resetBtn = document.getElementById('btn-reset-recite-this');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      container.style.display = 'none';
+    });
+  }
+}
+
+// 开始填空默写（针对当前诗词）
+function startDictationThis(poemData, resultContainer) {
+  // 显示默写界面
+  resultContainer.style.display = 'block';
+  
+  // 生成带空白的内容
+  const content = poemData.content;
+  let contentBlank = content;
+  
+  // 随机选择一些位置替换为空白
+  const chars = content.split('');
+  const blankPositions = [];
+  
+  // 计算要替换的字符数量（约30%）
+  let charCount = 0;
+  for (let i = 0; i < chars.length; i++) {
+    if (!chars[i].match(/[，。；：？！\n]/)) {
+      charCount++;
+    }
+  }
+  
+  const blankCount = Math.max(2, Math.floor(charCount * 0.3));
+  
+  // 随机选择位置
+  while (blankPositions.length < blankCount) {
+    const pos = Math.floor(Math.random() * chars.length);
+    if (!chars[pos].match(/[，。；：？！\n]/) && !blankPositions.includes(pos)) {
+      blankPositions.push(pos);
+    }
+  }
+  
+  // 替换为空白
+  for (let i = 0; i < chars.length; i++) {
+    if (blankPositions.includes(i)) {
+      chars[i] = '□';
+    }
+  }
+  
+  contentBlank = chars.join('');
+  
+  // 生成带输入框的内容
+  let interactiveContent = escapeHtml(formatContent(contentBlank));
+  let inputCount = 0;
+  
+  // 替换空白为输入框
+  interactiveContent = interactiveContent.replace(/□/g, () => {
+    const inputId = `blank-${Date.now()}-${inputCount++}`;
+    return `<input type="text" class="dictation-input" id="${inputId}" maxlength="1" placeholder="_" style="width: 2rem; height: 1.5rem; text-align: center; margin: 0 0.2rem; border: 1px solid #ccc; border-radius: 4px; font-family: 'Noto Serif SC', serif; font-size: 1rem;">`;
+  });
+
+  resultContainer.innerHTML = `
+    <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px;">
+      <h4 style="margin-bottom: 1rem;">填空默写：《${escapeHtml(poemData.title)}》</h4>
+      <div class="poem-meta" style="margin-bottom: 1.5rem;">${escapeHtml(poemData.author)} · ${escapeHtml(poemData.dynasty)}</div>
+      <div class="poem-text" style="margin-bottom: 1.5rem;">${interactiveContent}</div>
+      <button class="btn btn-primary" id="btn-submit-dictation-this" data-content="${escapeHtml(poemData.content)}">提交答案</button>
+    </div>
+  `;
+  
+  // 添加提交按钮事件
+  const submitBtn = document.getElementById('btn-submit-dictation-this');
+  if (submitBtn) {
+    submitBtn.addEventListener('click', () => {
+      const originalContent = submitBtn.dataset.content;
+      submitDictationThis(resultContainer, originalContent);
+    });
+  }
+}
+
+// 提交填空默写答案
+function submitDictationThis(container, originalContent) {
+  // 获取用户输入
+  const inputs = container.querySelectorAll('.dictation-input');
+  const userAnswers = Array.from(inputs).map(input => input.value.trim());
+  
+  // 提取原始内容中的空白位置的正确字符
+  const originalChars = originalContent.split('');
+  const blankPositions = [];
+  let index = 0;
+  
+  for (let i = 0; i < originalChars.length; i++) {
+    if (!originalChars[i].match(/[。，、；：？！\n]/)) {
+      blankPositions.push(originalChars[i]);
+    }
+  }
+  
+  // 判定答案
+  let correctCount = 0;
+  for (let i = 0; i < userAnswers.length; i++) {
+    if (userAnswers[i] === blankPositions[i]) {
+      correctCount++;
+    }
+  }
+  
+  // 生成高亮显示的答案
+  let highlightedContent = escapeHtml(formatContent(originalContent));
+  
+  // 分析空白位置并高亮显示
+  const originalFormatted = formatContent(originalContent);
+  let result = '';
+  let originalIndex = 0;
+  let answerIndex = 0;
+  
+  for (let i = 0; i < originalFormatted.length; i++) {
+    if (originalFormatted[i] !== '。' && originalFormatted[i] !== '，' && originalFormatted[i] !== '、' && originalFormatted[i] !== '；' && originalFormatted[i] !== '：' && originalFormatted[i] !== '？' && originalFormatted[i] !== '！' && originalFormatted[i] !== '\n') {
+      const userAnswer = userAnswers[answerIndex] || '';
+      const isCorrect = userAnswer === originalFormatted[i];
+      result += isCorrect 
+        ? `<span style="color: green; font-weight: bold;">${escapeHtml(originalFormatted[i])}</span>`
+        : `<span style="color: red; font-weight: bold;">${escapeHtml(originalFormatted[i])}</span>`;
+      answerIndex++;
+    } else {
+      result += originalFormatted[i];
+    }
+  }
+  
+  // 显示结果
+  container.innerHTML = `
+    <div style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px;">
+      <h4 style="margin-bottom: 1rem;">默写结果</h4>
+      <p style="margin-bottom: 1rem;">答对 ${correctCount} 题，共 ${userAnswers.length} 题</p>
+      <p style="margin-bottom: 0.5rem; font-weight: 600;">参考答案：</p>
+      <div class="poem-text" style="margin-bottom: 1.5rem;">${result}</div>
+      <button class="btn btn-secondary" id="btn-reset-dictation-this">重新默写</button>
+    </div>
+  `;
+  
+  // 添加重新默写按钮事件
+  const resetBtn = document.getElementById('btn-reset-dictation-this');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      container.style.display = 'none';
+    });
+  }
 }

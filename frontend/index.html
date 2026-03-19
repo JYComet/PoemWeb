@@ -13,26 +13,115 @@
   <div class="app">
     <!-- 顶部导航 -->
     <header class="header">
-      <div class="logo">
-        <span class="logo-icon">詩</span>
-        <h1>诗韵雅集</h1>
-        <p class="subtitle">古诗词智能问答 · 一站式学习与互动</p>
+      <div class="header-top">
+        <div class="logo">
+          <span class="logo-icon">詩</span>
+          <h1>诗韵雅集</h1>
+          <p class="subtitle">古诗词智能问答 · 一站式学习与互动</p>
+        </div>
+        <div class="search-bar-container">
+          <div class="search-bar">
+            <input type="text" id="top-search-input" placeholder="搜索诗词..." class="top-search-input">
+            <button class="search-btn" id="top-search-btn">🔍</button>
+          </div>
+          <div class="search-dropdown" id="search-dropdown">
+            <div class="search-form">
+              <input type="text" id="dropdown-search-keyword" placeholder="关键词（诗名/诗句）">
+              <input type="text" id="dropdown-search-author" placeholder="诗人">
+              <input type="text" id="dropdown-search-dynasty" placeholder="朝代">
+              <input type="text" id="dropdown-search-tag" placeholder="题材（春/月/山水等）">
+              <button class="btn btn-primary" id="dropdown-btn-search">检索</button>
+            </div>
+          </div>
+        </div>
       </div>
-      <nav class="nav">
-        <a href="#" class="nav-link active" data-section="search">多维检索</a>
-        <a href="#" class="nav-link" data-section="qa">智能问答</a>
-        <a href="#" class="nav-link" data-section="feihualing">飞花令</a>
-        <a href="#" class="nav-link" data-section="ai-write">AI 写诗</a>
-        <a href="#" class="nav-link" data-section="recite">背诵默写</a>
-        <a href="#" class="nav-link" data-section="nav">分类导航</a>
-        <a href="#" class="nav-link" data-section="graph">知识图谱</a>
-        <a href="#" class="nav-link" data-section="trajectory">诗人行迹</a>
-      </nav>
+      <div class="nav-container">
+        <div class="nav">
+          <a href="#" class="nav-link active" data-section="home">首页</a>
+          <a href="#" class="nav-link" data-section="search">多维检索</a>
+          <a href="#" class="nav-link" data-section="qa">智能问答</a>
+          <a href="#" class="nav-link" data-section="feihualing">飞花令</a>
+          <a href="#" class="nav-link" data-section="recite">背诵默写</a>
+          <a href="#" class="nav-link" data-section="solitaire">诗词接龙</a>
+          <a href="#" class="nav-link" data-section="nav">分类导航</a>
+          <a href="#" class="nav-link" data-section="graph">知识图谱</a>
+          <a href="#" class="nav-link" data-section="trajectory">诗人行迹</a>
+        </div>
+      </div>
     </header>
 
     <main class="main">
+      <!-- 首页 -->
+      <section id="home" class="section active">
+        <div class="home-hero">
+          <div class="hero-content">
+            <h2>诗韵雅集</h2>
+            <p>传承中华诗词之美</p>
+            <div class="hero-buttons">
+              <a href="#" class="btn btn-primary" data-section="recite">开始背诵默写</a>
+              <a href="#" class="btn btn-secondary" data-section="qa">智能问答</a>
+            </div>
+          </div>
+          <div class="hero-bg"></div>
+        </div>
+        <div class="home-features">
+          <h3>核心功能</h3>
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon">🔍</div>
+              <h4>多维检索</h4>
+              <p>按诗名、作者、朝代、题材等多维度精准查找</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">💬</div>
+              <h4>智能问答</h4>
+              <p>用自然语言提问，获取精准答案</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🌸</div>
+              <h4>飞花令</h4>
+              <p>输入一个汉字，找出包含该字的所有诗句</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon">📝</div>
+              <h4>背诵默写</h4>
+              <p>随机抽取诗词进行背诵练习或填空默写</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">📊</div>
+              <h4>知识图谱</h4>
+              <p>诗人、朝代、诗词、题材关系可视化</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🗺️</div>
+              <h4>诗人行迹</h4>
+              <p>探索诗人创作轨迹与历史行迹地图</p>
+            </div>
+          </div>
+        </div>
+        <div class="home-random-poem">
+          <div class="section-header">
+            <h3>随机古诗推荐</h3>
+            <p>点击刷新按钮获取随机古诗</p>
+          </div>
+          <div class="random-poem-container">
+            <div class="random-poem-content" id="random-poem-content">
+              <!-- 随机古诗将通过JavaScript动态生成 -->
+            </div>
+            <button class="btn btn-secondary" id="btn-refresh-poem">刷新古诗</button>
+          </div>
+        </div>
+        <div class="home-poems">
+          <h3>推荐诗词</h3>
+          <div class="poems-slider" id="home-poems-slider">
+            <!-- 诗词卡片将通过JavaScript动态生成 -->
+          </div>
+        </div>
+      </section>
+
       <!-- 多维检索 -->
-      <section id="search" class="section active">
+      <section id="search" class="section">
         <div class="section-header">
           <h2>多维诗词检索</h2>
           <p>按诗名、作者、朝代、题材等多维度精准查找</p>
@@ -64,25 +153,45 @@
       <section id="feihualing" class="section">
         <div class="section-header">
           <h2>飞花令</h2>
-          <p>输入一个汉字，找出包含该字的所有诗句</p>
+          <p>输入一个汉字，与系统进行飞花令游戏</p>
         </div>
         <div class="feihualing-box">
           <input type="text" id="feihualing-char" maxlength="1" placeholder="输入一字">
           <button class="btn btn-primary" id="btn-feihualing">开始</button>
           <div class="feihualing-result" id="feihualing-result"></div>
+          <div class="feihualing-game" id="feihualing-game" style="display: none;">
+            <div class="game-status" id="game-status"></div>
+            <div class="game-history" id="game-history"></div>
+            <div class="user-input">
+              <input type="text" id="user-input" placeholder="请输入含该字的诗句">
+              <button class="btn btn-primary" id="btn-submit">提交</button>
+              <button class="btn btn-secondary" id="btn-hint">提示</button>
+            </div>
+          </div>
         </div>
       </section>
 
-      <!-- AI 写诗 -->
-      <section id="ai-write" class="section">
+      <!-- 诗词接龙 -->
+      <section id="solitaire" class="section">
         <div class="section-header">
-          <h2>AI 写诗</h2>
-          <p>输入主题，AI 为您即兴创作</p>
+          <h2>诗词接龙</h2>
+          <p>根据上一句诗词，接出下一句，或根据下一句，猜出上一句</p>
         </div>
-        <div class="ai-write-box">
-          <input type="text" id="ai-theme" placeholder="输入主题，如：春、月、山水" value="春">
-          <button class="btn btn-primary" id="btn-ai-write">生成诗词</button>
-          <div class="ai-result" id="ai-result"></div>
+        <div class="solitaire-box">
+          <div class="solitaire-mode">
+            <button class="btn btn-primary" id="btn-mode-next">上句接下句</button>
+            <button class="btn btn-secondary" id="btn-mode-prev">下句猜上句</button>
+          </div>
+          <div class="solitaire-game" id="solitaire-game">
+            <div class="game-status" id="solitaire-status"></div>
+            <div class="game-question" id="solitaire-question"></div>
+            <div class="user-input">
+              <input type="text" id="solitaire-input" placeholder="请输入答案">
+              <button class="btn btn-primary" id="btn-solitaire-submit">提交</button>
+              <button class="btn btn-secondary" id="btn-solitaire-hint">提示</button>
+            </div>
+            <div class="game-score" id="solitaire-score">得分：0</div>
+          </div>
         </div>
       </section>
 
@@ -112,6 +221,10 @@
           <button class="tab-btn active" data-tab="authors">诗人</button>
           <button class="tab-btn" data-tab="tags">题材</button>
           <button class="tab-btn" data-tab="dynasties">朝代</button>
+        </div>
+        <div class="nav-search" style="margin: 1rem 0;">
+          <input type="text" id="nav-search-input" placeholder="搜索..." style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem;">
+          <button class="btn btn-secondary" id="btn-nav-search" style="margin-top: 0.5rem;">搜索</button>
         </div>
         <div class="nav-content" id="nav-content"></div>
       </section>
@@ -174,10 +287,21 @@
         <div class="poem-detail" id="poem-detail"></div>
       </div>
     </div>
+    
+    <!-- 诗人详情弹窗 -->
+    <div class="modal" id="poet-modal">
+      <div class="modal-content">
+        <button class="modal-close" id="poet-modal-close">×</button>
+        <div class="poet-detail" id="poet-detail"></div>
+      </div>
+    </div>
 
     <footer class="footer">
       <p>诗韵雅集 · 传承中华诗词之美</p>
     </footer>
+    
+    <!-- 回到顶部按钮 -->
+    <button id="back-to-top" class="back-to-top" title="回到顶部">↑</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.poemweb.mapper.PoemMapper">
+    <resultMap id="poemResultMap" type="com.poemweb.entity.Poem">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="authorId" column="author_id"/>
+        <result property="dynastyId" column="dynasty_id"/>
+        <result property="tagId" column="tag_id"/>
+        <result property="content" column="content"/>
+        <result property="annotation" column="annotation"/>
+        <result property="translation" column="translation"/>
+        <result property="background" column="background"/>
+        <result property="emotion" column="emotion"/>
+        <result property="allusion" column="allusion"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="author" column="author_name"/>
+        <result property="dynasty" column="dynasty_name"/>
+        <result property="tag" column="tag_name"/>
+    </resultMap>
+
+    <select id="searchPoems" resultMap="poemResultMap">
+        SELECT p.*, a.name as author_name, d.name as dynasty_name, t.name as tag_name
+        FROM poem p
+        LEFT JOIN author a ON p.author_id = a.id
+        LEFT JOIN dynasty d ON p.dynasty_id = d.id
+        LEFT JOIN tag t ON p.tag_id = t.id
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND (p.title LIKE CONCAT('%', #{keyword}, '%') OR p.content LIKE CONCAT('%', #{keyword}, '%') OR a.name LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="author != null and author != ''">
+            AND a.name LIKE CONCAT('%', #{author}, '%')
+        </if>
+        <if test="dynasty != null and dynasty != ''">
+            AND d.name LIKE CONCAT('%', #{dynasty}, '%')
+        </if>
+        <if test="tag != null and tag != ''">
+            AND t.name LIKE CONCAT('%', #{tag}, '%')
+        </if>
+        LIMIT 50
+    </select>
+
+    <select id="getPoemByTitle" resultMap="poemResultMap">
+        SELECT p.*, a.name as author_name, d.name as dynasty_name, t.name as tag_name
+        FROM poem p
+        LEFT JOIN author a ON p.author_id = a.id
+        LEFT JOIN dynasty d ON p.dynasty_id = d.id
+        LEFT JOIN tag t ON p.tag_id = t.id
+        WHERE p.title = #{title}
+        LIMIT 1
+    </select>
+
+    <select id="getAllPoems" resultMap="poemResultMap">
+        SELECT p.*, a.name as author_name, d.name as dynasty_name, t.name as tag_name
+        FROM poem p
+        LEFT JOIN author a ON p.author_id = a.id
+        LEFT JOIN dynasty d ON p.dynasty_id = d.id
+        LEFT JOIN tag t ON p.tag_id = t.id
+    </select>
+
+    <select id="getPoemsByAuthorId" resultMap="poemResultMap">
+        SELECT p.*, a.name as author_name, d.name as dynasty_name, t.name as tag_name
+        FROM poem p
+        LEFT JOIN author a ON p.author_id = a.id
+        LEFT JOIN dynasty d ON p.dynasty_id = d.id
+        LEFT JOIN tag t ON p.tag_id = t.id
+        WHERE p.author_id = #{authorId}
+    </select>
+
+    <select id="getPoemsByDynastyId" resultMap="poemResultMap">
+        SELECT p.*, a.name as author_name, d.name as dynasty_name, t.name as tag_name
+        FROM poem p
+        LEFT JOIN author a ON p.author_id = a.id
+        LEFT JOIN dynasty d ON p.dynasty_id = d.id
+        LEFT JOIN tag t ON p.tag_id = t.id
+        WHERE p.dynasty_id = #{dynastyId}
+    </select>
+
+    <select id="getPoemsByTagId" resultMap="poemResultMap">
+        SELECT p.*, a.name as author_name, d.name as dynasty_name, t.name as tag_name
+        FROM poem p
+        LEFT JOIN author a ON p.author_id = a.id
+        LEFT JOIN dynasty d ON p.dynasty_id = d.id
+        LEFT JOIN tag t ON p.tag_id = t.id
+        WHERE p.tag_id = #{tagId}
+    </select>
+</mapper>

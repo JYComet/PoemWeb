@@ -1,7 +1,123 @@
 /**
  * 诗韵雅集 - 古诗词智能问答 - 前端逻辑
  */
-const API_BASE = 'http://localhost:8080';
+const API_BASE = '';
+
+// 顶部提示
+function showToast(message, type = 'success') {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.className = 'toast ' + type;
+  void toast.offsetWidth;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000);
+}
+
+// ==================== 用户登录状态管理 ====================
+
+// 检查登录状态
+async function checkLoginStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/api/user/check`);
+    const json = await res.json();
+    
+    const notLoggedEl = document.getElementById('user-not-logged');
+    const loggedEl = document.getElementById('user-logged');
+    
+    if (json.success && json.loggedIn) {
+      // 已登录
+      notLoggedEl.style.display = 'none';
+      loggedEl.style.display = 'block';
+      
+      const user = json.data;
+      const displayName = user.nickname || user.username;
+      document.getElementById('user-display-name').textContent = displayName;
+      document.getElementById('dropdown-username').textContent = displayName;
+    } else {
+      // 未登录
+      notLoggedEl.style.display = 'flex';
+      loggedEl.style.display = 'none';
+    }
+  } catch (e) {
+    console.error('检查登录状态失败:', e);
+  }
+}
+
+// 退出登录
+async function handleLogout() {
+  try {
+    const res = await fetch(`${API_BASE}/api/user/logout`, {
+      method: 'POST'
+    });
+    const json = await res.json();
+    
+    if (json.success) {
+      showToast('已退出登录', 'success');
+      // 可选：跳转到首页
+      setTimeout(() => { window.location.href = '/login.html'; }, 1500);
+    }
+  } catch (e) {
+    console.error('退出登录失败:', e);
+    showToast('退出失败，请重试', 'error');
+  }
+}
+
+// 初始化用户下拉菜单交互
+function initUserDropdown() {
+  const avatarTrigger = document.getElementById('user-avatar-trigger');
+  const dropdown = document.getElementById('user-dropdown');
+  const logoutBtn = document.getElementById('btn-logout');
+  
+  if (avatarTrigger) {
+    avatarTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isShown = dropdown.style.display === 'block';
+      dropdown.style.display = isShown ? 'none' : 'block';
+      avatarTrigger.classList.toggle('active', !isShown);
+    });
+  }
+  
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleLogout();
+    });
+  }
+  
+  // 点击其他地方关闭下拉菜单
+  document.addEventListener('click', (e) => {
+    if (!dropdown.contains(e.target) && !avatarTrigger.contains(e.target)) {
+      dropdown.style.display = 'none';
+      if (avatarTrigger) avatarTrigger.classList.remove('active');
+    }
+  });
+  
+  // 下拉菜单中的导航链接点击事件
+  dropdown.querySelectorAll('.dropdown-item[data-section]').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      const section = item.dataset.section;
+      dropdown.style.display = 'none';
+      avatarTrigger.classList.remove('active');
+      // 触发导航切换
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      const navLink = document.querySelector(`.nav-link[data-section="${section}"]`);
+      if (navLink) {
+        navLink.classList.add('active');
+        navLink.click();
+      }
+    });
+  });
+}
+
+// 在页面加载时检查登录状态
+document.addEventListener('DOMContentLoaded', () => {
+  checkLoginStatus();
+  initUserDropdown();
+});
 
 // 导航切换
 document.querySelectorAll('.nav-link').forEach(link => {
@@ -1381,9 +1497,17 @@ async function showPoemDetail(title) {
       });
     }
     
+    // 生成数据来源标识
+    const dataSourceBadge = (p.dataSource === 1) 
+      ? '<span class="data-source-badge ai">AI生成</span>' 
+      : '<span class="data-source-badge database">原始数据</span>';
+    
     let html = `
       <div class="detail-title">《${escapeHtml(p.title)}》</div>
-      <div class="detail-meta">${escapeHtml(p.author)} · ${escapeHtml(p.dynasty)} · ${escapeHtml(p.tag || '')}</div>
+      <div class="detail-meta">
+        <span>${escapeHtml(p.author)} · ${escapeHtml(p.dynasty)} · ${escapeHtml(p.tag || '')}</span>
+        ${dataSourceBadge}
+      </div>
       <div class="detail-section">
         <h4>诗词介绍</h4>
         <p>${escapeHtml(introduction)}</p>
@@ -1725,12 +1849,20 @@ async function showPoemDetailWithBack(title, author) {
       });
     }
     
+    // 生成数据来源标识
+    const dataSourceBadge = (p.dataSource === 1) 
+      ? '<span class="data-source-badge ai">AI生成</span>' 
+      : '<span class="data-source-badge database">原始数据</span>';
+    
     let html = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
         <h3 class="detail-title">《${escapeHtml(p.title)}》</h3>
         <button class="btn btn-secondary" id="back-to-poet" data-author="${escapeHtml(author)}">返回诗人页</button>
       </div>
-      <div class="detail-meta">${escapeHtml(p.author)} · ${escapeHtml(p.dynasty)} · ${escapeHtml(p.tag || '')}</div>
+      <div class="detail-meta">
+        <span>${escapeHtml(p.author)} · ${escapeHtml(p.dynasty)} · ${escapeHtml(p.tag || '')}</span>
+        ${dataSourceBadge}
+      </div>
       <div class="detail-section">
         <h4>诗词介绍</h4>
         <p>${escapeHtml(introduction)}</p>
@@ -2282,4 +2414,510 @@ function submitDictationThis(container, originalContent) {
       container.style.display = 'none';
     });
   }
+}
+
+// ==================== 诗词问答功能 ====================
+let quizQuestions = [];
+let quizScore = 0;
+let quizAnswered = 0;
+
+// 诗词问答子标签页切换
+document.querySelectorAll('.quiz-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.quiz-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.quiz-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.quizTab;
+    document.getElementById(tab === 'practice' ? 'quiz-panel' : 'wrong-panel').classList.add('active');
+    // 切换到错题时加载数据
+    if (tab === 'wrong') {
+      loadWrongAnswers();
+    }
+  });
+});
+
+// 开始答题
+async function startQuiz() {
+  const count = document.getElementById('questionCount').value;
+  const type = document.getElementById('questionType').value;
+  const btn = document.getElementById('btn-start-quiz');
+  
+  // 显示加载状态
+  btn.textContent = '⏳ 生成题目中...';
+  btn.disabled = true;
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/quiz/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count: parseInt(count), type: type === 'all' ? null : type })
+    });
+    
+    if (res.status === 401) {
+      showToast('请先登录后再答题', 'warning');
+      setTimeout(() => { window.location.href = '/login.html'; }, 1500);
+      return;
+    }
+    
+    const json = await res.json();
+    
+    if (!json.success) {
+      showToast(json.message || '生成题目失败', 'error');
+      return;
+    }
+    
+    quizQuestions = json.data || [];
+    quizScore = 0;
+    quizAnswered = 0;
+    
+    if (quizQuestions.length === 0) {
+      showToast('暂无可生成的题目', 'warning');
+      return;
+    }
+    
+    renderQuizQuestions();
+    
+    // 重置进度条
+    updateProgress();
+    
+    document.getElementById('quizSetup').style.display = 'none';
+    document.getElementById('quizArea').style.display = 'block';
+    document.getElementById('quizResult').style.display = 'none';
+    
+    // 滚动到题目区域
+    document.getElementById('quizArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (error) {
+    console.error('生成题目失败:', error);
+    showToast('网络错误，请检查后端服务是否启动', 'error');
+  } finally {
+    btn.innerHTML = '<span class="btn-icon">✍️</span>开始答题';
+    btn.disabled = false;
+  }
+}
+
+// 更新进度条
+function updateProgress() {
+  const progressText = document.getElementById('progressText');
+  const progressPercent = document.getElementById('progressPercent');
+  const progressFill = document.getElementById('progressFill');
+  
+  if (progressText && progressPercent && progressFill) {
+    const percent = quizQuestions.length > 0 ? Math.round((quizAnswered / quizQuestions.length) * 100) : 0;
+    progressText.textContent = `进度：${quizAnswered}/${quizQuestions.length}`;
+    progressPercent.textContent = `${percent}%`;
+    progressFill.style.width = `${percent}%`;
+  }
+}
+
+// 渲染题目
+function renderQuizQuestions() {
+  const container = document.getElementById('quizQuestions');
+  
+  container.innerHTML = quizQuestions.map((q, index) => {
+    // 解析options：可能是逗号分隔字符串、JSON字符串或数组
+    let opts = q.options;
+    if (typeof opts === 'string') {
+      if (opts.startsWith('[')) {
+        try { opts = JSON.parse(opts); } catch(e) { opts = []; }
+      } else {
+        opts = opts.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      }
+    }
+    if (!Array.isArray(opts)) opts = [];
+    
+    if (q.questionType === 'choice') {
+      return `
+        <div class="question-card" id="question-${index}">
+          <div class="question-header">
+            <span class="question-number">第 ${index + 1} 题</span>
+            <span class="question-type">选择题</span>
+          </div>
+          <div class="question-content">${escapeHtml(q.question)}</div>
+          <div class="options-container">
+            ${opts.map((opt, optIndex) => `
+              <button class="option-btn" onclick="submitQuizAnswer(${index}, '${escapeHtml(opt)}', this)">${escapeHtml(opt)}</button>
+            `).join('')}
+          </div>
+          <div class="question-result" id="result-${index}" style="display: none;"></div>
+        </div>
+      `;
+    } else if (q.questionType === 'judge') {
+      return `
+        <div class="question-card" id="question-${index}">
+          <div class="question-header">
+            <span class="question-number">第 ${index + 1} 题</span>
+            <span class="question-type">判断题</span>
+          </div>
+          <div class="question-content">${escapeHtml(q.question)}</div>
+          <div class="options-container">
+            <button class="option-btn" onclick="submitQuizAnswer(${index}, '正确', this)">正确</button>
+            <button class="option-btn" onclick="submitQuizAnswer(${index}, '错误', this)">错误</button>
+          </div>
+          <div class="question-result" id="result-${index}" style="display: none;"></div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="question-card" id="question-${index}">
+          <div class="question-header">
+            <span class="question-number">第 ${index + 1} 题</span>
+            <span class="question-type">填空题</span>
+          </div>
+          <div class="question-content">${escapeHtml(q.question)}</div>
+          <div class="fill-input-container">
+            <input type="text" id="fill-input-${index}" placeholder="请输入答案" class="fill-input">
+            <button class="btn btn-primary" onclick="submitFillAnswer(${index})">提交</button>
+          </div>
+          <div class="question-result" id="result-${index}" style="display: none;"></div>
+        </div>
+      `;
+    }
+  }).join('');
+}
+
+// 提交选择/判断答案
+async function submitQuizAnswer(index, userAnswer, btnElement) {
+  const question = quizQuestions[index];
+  const resultDiv = document.getElementById(`result-${index}`);
+  const questionCard = document.getElementById(`question-${index}`);
+  
+  // 禁用所有按钮
+  const allButtons = questionCard.querySelectorAll('.option-btn');
+  allButtons.forEach(btn => {
+    btn.disabled = true;
+    if (btn.textContent === question.answer) {
+      btn.classList.add('correct');
+    }
+  });
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/quiz/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        questionId: question.id,
+        userAnswer: userAnswer
+      })
+    });
+    
+    if (res.status === 401) {
+      resultDiv.innerHTML = '<div class="result-error">请先登录</div>';
+      resultDiv.style.display = 'block';
+      return;
+    }
+    
+    const json = await res.json();
+    
+    if (json.correct) {
+      btnElement.classList.add('correct');
+      resultDiv.innerHTML = '<div class="result-correct">回答正确！</div>';
+      quizScore++;
+    } else {
+      btnElement.classList.add('wrong');
+      resultDiv.innerHTML = `<div class="result-wrong">回答错误，正确答案：${escapeHtml(question.answer)}</div>`;
+    }
+    
+    resultDiv.style.display = 'block';
+    quizAnswered++;
+    
+    // 标记题目为已答
+    questionCard.classList.add('answered');
+    
+    // 更新进度条
+    updateProgress();
+    
+    if (quizAnswered === quizQuestions.length) {
+      showQuizResult();
+    }
+  } catch (error) {
+    console.error('提交答案失败:', error);
+    resultDiv.innerHTML = '<div class="result-error">提交失败</div>';
+    resultDiv.style.display = 'block';
+  }
+}
+
+// 提交填空答案
+async function submitFillAnswer(index) {
+  const input = document.getElementById(`fill-input-${index}`);
+  const userAnswer = input.value.trim();
+  
+  if (!userAnswer) {
+    showToast('请输入答案', 'warning');
+    return;
+  }
+  
+  const question = quizQuestions[index];
+  const resultDiv = document.getElementById(`result-${index}`);
+  const questionCard = document.getElementById(`question-${index}`);
+  
+  // 禁用输入框和按钮
+  input.disabled = true;
+  const submitBtn = questionCard.querySelector('.btn');
+  submitBtn.disabled = true;
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/quiz/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        questionId: question.id,
+        userAnswer: userAnswer
+      })
+    });
+    
+    if (res.status === 401) {
+      resultDiv.innerHTML = '<div class="result-error">请先登录</div>';
+      resultDiv.style.display = 'block';
+      return;
+    }
+    
+    const json = await res.json();
+    
+    if (json.correct) {
+      resultDiv.innerHTML = '<div class="result-correct">回答正确！</div>';
+      quizScore++;
+    } else {
+      resultDiv.innerHTML = `<div class="result-wrong">回答错误，正确答案：${escapeHtml(question.answer)}</div>`;
+    }
+    
+    resultDiv.style.display = 'block';
+    quizAnswered++;
+    
+    // 标记题目为已答
+    questionCard.classList.add('answered');
+    
+    // 更新进度条
+    updateProgress();
+    
+    if (quizAnswered === quizQuestions.length) {
+      showQuizResult();
+    }
+  } catch (error) {
+    console.error('提交答案失败:', error);
+    resultDiv.innerHTML = '<div class="result-error">提交失败</div>';
+    resultDiv.style.display = 'block';
+  }
+}
+
+// 显示答题结果
+function showQuizResult() {
+  const resultDiv = document.getElementById('quizResult');
+  const percentage = Math.round((quizScore / quizQuestions.length) * 100);
+  
+  resultDiv.innerHTML = `
+    <div class="quiz-score">
+      <h3>答题完成</h3>
+      <div class="score-circle">
+        <span class="score-number">${quizScore}/${quizQuestions.length}</span>
+        <span class="score-percent">${percentage}%</span>
+      </div>
+      <p class="score-message">${percentage >= 80 ? '优秀！继续保持！' : percentage >= 60 ? '不错，继续努力！' : '还需加强练习，查看错题巩固知识！'}</p>
+      <div class="quiz-actions">
+        <button class="btn btn-primary" onclick="restartQuiz()">重新开始</button>
+        <button class="btn btn-secondary" onclick="viewWrongAnswers()">查看错题</button>
+      </div>
+    </div>
+  `;
+  resultDiv.style.display = 'block';
+}
+
+// 重新开始
+function restartQuiz() {
+  document.getElementById('quizSetup').style.display = 'block';
+  document.getElementById('quizArea').style.display = 'none';
+  document.getElementById('quizResult').style.display = 'none';
+  document.getElementById('quizQuestions').innerHTML = '';
+  updateProgress();
+}
+
+// 查看错题
+function viewWrongAnswers() {
+  document.querySelector('.nav-link[data-section="wrong"]').click();
+  loadWrongAnswers();
+}
+
+// 加载错题
+async function loadWrongAnswers() {
+  try {
+    const res = await fetch(`${API_BASE}/api/quiz/wrongAnswers`);
+    
+    if (res.status === 401) {
+      document.getElementById('wrongAnswers').innerHTML = '<p class="empty">请先登录后查看错题</p>';
+      return;
+    }
+    
+    const json = await res.json();
+    
+    const container = document.getElementById('wrongAnswers');
+    const emptyState = document.getElementById('wrongEmpty');
+    
+    if (!json.success) {
+      container.innerHTML = '<p class="empty">加载失败</p>';
+      return;
+    }
+    
+    const wrongAnswers = json.data || [];
+    
+    if (wrongAnswers.length === 0) {
+      container.innerHTML = '';
+      emptyState.style.display = 'block';
+      return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    container.innerHTML = wrongAnswers.map(w => `
+      <div class="wrong-card" id="wrong-${w.id}">
+        <div class="wrong-question">${escapeHtml(w.question)}</div>
+        <div class="wrong-detail">
+          <span class="label">你的答案：</span><span class="wrong-answer">${escapeHtml(w.userAnswer)}</span>
+        </div>
+        <div class="wrong-detail">
+          <span class="label">正确答案：</span><span class="correct-answer">${escapeHtml(w.correctAnswer)}</span>
+        </div>
+        <div class="wrong-detail">
+          <span class="label">知识点：</span><span>${escapeHtml(w.knowledgePoint || '')}</span>
+        </div>
+        <div class="wrong-detail">
+          <span class="label">错误次数：</span><span>${w.wrongCount || 1}</span>
+        </div>
+        <button class="btn btn-secondary btn-small" onclick="removeWrong(${w.id})">已掌握</button>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error('加载错题失败:', error);
+    showToast('网络错误', 'error');
+  }
+}
+
+// 移除错题
+async function removeWrong(id) {
+  try {
+    const res = await fetch(`${API_BASE}/api/quiz/wrongAnswers/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id })
+    });
+    
+    if (res.status === 401) {
+      showToast('请先登录', 'warning');
+      return;
+    }
+    
+    const json = await res.json();
+    
+    if (json.success) {
+      showToast('已掌握', 'success');
+      const wrongCard = document.getElementById(`wrong-${id}`);
+      if (wrongCard) {
+        wrongCard.remove();
+      }
+      
+      // 如果没有错题了，显示空状态
+      const container = document.getElementById('wrongAnswers');
+      if (container.children.length === 0) {
+        document.getElementById('wrongEmpty').style.display = 'block';
+      }
+    }
+  } catch (error) {
+    console.error('移除错题失败:', error);
+    showToast('移除失败', 'error');
+  }
+}
+
+// 监听hash变化加载错题
+window.addEventListener('hashchange', function() {
+  const hash = window.location.hash.substring(1);
+  if (hash === 'wrong') {
+    loadWrongAnswers();
+  }
+});
+
+// ==================== 诗词详情页增强功能 ====================
+
+// 显示原文（展开诗词原文）
+function showOriginalPoem(title, author, dynasty, content) {
+  const detailContainer = document.getElementById('poem-detail');
+  if (!detailContainer) return;
+  
+  // 检查是否已经有原文区域
+  let originalSection = document.getElementById('poem-original-section');
+  if (!originalSection) {
+    // 在诗词介绍之后添加原文区域
+    const introductionSection = detailContainer.querySelector('.detail-section:nth-of-type(1)');
+    originalSection = document.createElement('div');
+    originalSection.id = 'poem-original-section';
+    originalSection.className = 'detail-section';
+    originalSection.style.background = 'var(--paper)';
+    originalSection.style.padding = '1.5rem';
+    originalSection.style.borderRadius = '8px';
+    originalSection.style.marginBottom = '1.5rem';
+    originalSection.innerHTML = `
+      <h4>诗词原文</h4>
+      <div style="font-size: 1.15rem; line-height: 1.9; white-space: pre-wrap; padding: 1rem; background: white; border-radius: 6px; border-left: 3px solid var(--accent);">${escapeHtml(content)}</div>
+    `;
+    if (introductionSection) {
+      detailContainer.insertBefore(originalSection, introductionSection.nextSibling);
+    } else {
+      detailContainer.appendChild(originalSection);
+    }
+  } else {
+    // 已经显示，则滚动到该区域
+    originalSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+// 显示AI赏析
+async function showAIAppreciation(title, author, dynasty, content) {
+  const detailContainer = document.getElementById('poem-detail');
+  if (!detailContainer) return;
+  
+  const btn = event.target;
+  const originalText = btn.textContent;
+  btn.textContent = '生成中...';
+  btn.disabled = true;
+  
+  // 检查是否已经有赏析区域
+  let appreciationSection = document.getElementById('poem-appreciation-section');
+  if (!appreciationSection) {
+    appreciationSection = document.createElement('div');
+    appreciationSection.id = 'poem-appreciation-section';
+    appreciationSection.className = 'detail-section';
+    detailContainer.appendChild(appreciationSection);
+  }
+  
+  appreciationSection.innerHTML = '<h4>AI赏析</h4><div class="detail-content"><p style="color: var(--ink-muted);">正在生成赏析，请稍候...</p></div>';
+  
+  try {
+    const response = await fetch(`${API_BASE}/api/qa/ai/describe_poem`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: title,
+        author: author,
+        dynasty: dynasty,
+        content: content
+      })
+    });
+    
+    const json = await response.json();
+    
+    if (json.success && json.data && json.data.description) {
+      appreciationSection.innerHTML = `
+        <h4>AI赏析</h4>
+        <div class="detail-content" style="white-space: pre-wrap; line-height: 1.9; padding: 1.5rem; background: var(--paper); border-radius: 8px; border-left: 3px solid var(--gold);">${escapeHtml(json.data.description)}</div>
+      `;
+    } else {
+      appreciationSection.innerHTML = '<h4>AI赏析</h4><div class="detail-content"><p style="color: var(--red-seal);">生成失败：' + (json.message || '未知错误') + '</p></div>';
+    }
+  } catch (error) {
+    console.error('AI赏析失败:', error);
+    appreciationSection.innerHTML = '<h4>AI赏析</h4><div class="detail-content"><p style="color: var(--red-seal);">生成失败，请检查网络连接</p></div>';
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+  
+  // 滚动到赏析区域
+  appreciationSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }

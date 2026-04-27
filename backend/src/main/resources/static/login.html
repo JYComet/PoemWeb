@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>诗韵雅集 - 用户登录</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #2c1810;
+            --paper: #faf6f0;
+            --paper-dark: #f0e8dc;
+            --accent: #8b4513;
+            --accent-light: #a0522d;
+            --gold: #c9a227;
+            --gold-light: #e8d48b;
+            --red-seal: #8b2500;
+            --bamboo: #4a7c59;
+            --ink-muted: #5c4a3d;
+            --shadow: rgba(44, 24, 16, 0.08);
+            --font-serif: 'Noto Serif SC', 'STSong', 'SimSun', serif;
+            --font-cursive: 'Ma Shan Zheng', 'KaiTi', cursive;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-serif);
+            background: var(--paper);
+            color: var(--ink);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: 
+                radial-gradient(ellipse at 20% 20%, rgba(201, 162, 39, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(139, 69, 19, 0.04) 0%, transparent 50%);
+        }
+
+        /* 顶部提示 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease;
+            font-family: var(--font-serif);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: var(--bamboo);
+            color: white;
+        }
+
+        .toast.error {
+            background: var(--red-seal);
+            color: white;
+        }
+
+        .login-wrapper {
+            width: 90%;
+            max-width: 480px;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 登录卡片 */
+        .login-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow);
+            border: 1px solid var(--paper-dark);
+            padding: 2.5rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--gold) 50%, var(--accent) 100%);
+        }
+
+        /* 标题区 */
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-logo {
+            font-family: var(--font-cursive);
+            font-size: 2.5rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .login-title {
+            font-family: var(--font-cursive);
+            font-size: 1.8rem;
+            color: var(--ink);
+            margin-bottom: 0.5rem;
+        }
+
+        .login-subtitle {
+            font-size: 0.9rem;
+            color: var(--ink-muted);
+        }
+
+        .title-divider {
+            width: 60px;
+            height: 2px;
+            background: var(--gold);
+            margin: 1rem auto 0;
+        }
+
+        /* 表单 */
+        .form-title {
+            font-family: var(--font-cursive);
+            font-size: 1.4rem;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--ink-muted);
+            font-size: 0.9rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 2px solid var(--paper-dark);
+            border-radius: 8px;
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--ink);
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-group input::placeholder {
+            color: #c0b8a8;
+        }
+
+        .error-msg {
+            color: var(--red-seal);
+            font-size: 0.8rem;
+            margin-top: 0.3rem;
+            display: none;
+        }
+
+        /* 按钮 */
+        .btn {
+            width: 100%;
+            padding: 0.9rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: var(--font-serif);
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 0.5rem;
+        }
+
+        .btn:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* 切换链接 */
+        .switch-text {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--ink-muted);
+            font-size: 0.9rem;
+        }
+
+        .switch-text a {
+            color: var(--accent);
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .switch-text a:hover {
+            text-decoration: underline;
+            color: var(--accent-light);
+        }
+
+        /* 表单显示控制 */
+        .register-form { display: none; }
+
+        /* 装饰元素 */
+        .deco-poem {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px dashed var(--paper-dark);
+        }
+
+        .deco-poem p {
+            font-family: var(--font-cursive);
+            font-size: 1rem;
+            color: var(--ink-muted);
+            opacity: 0.7;
+        }
+
+        /* 回到首页 */
+        .back-home {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        .back-home a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .back-home a:hover {
+            color: var(--accent-light);
+        }
+
+        /* 响应式 */
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 2rem 1.5rem;
+            }
+
+            .login-logo {
+                font-size: 2rem;
+            }
+
+            .login-title {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast"></div>
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">詩</div>
+                <h1 class="login-title">诗韵雅集</h1>
+                <p class="login-subtitle">古诗词智能问答 · 一站式学习与互动</p>
+                <div class="title-divider"></div>
+            </div>
+
+            <!-- 登录表单 -->
+            <div id="loginForm">
+                <h2 class="form-title">用户登录</h2>
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="loginUsername" placeholder="请输入用户名">
+                    <div class="error-msg" id="loginUsernameError"></div>
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="loginPassword" placeholder="请输入密码">
+                    <div class="error-msg" id="loginPasswordError"></div>
+                </div>
+                <button class="btn" onclick="handleLogin()">登 录</button>
+                <div class="switch-text">
+                    还没有账号？<a onclick="toggleForm()">立即注册</a>
+                </div>
+            </div>
+
+            <!-- 注册表单 -->
+            <div id="registerForm" class="register-form">
+                <h2 class="form-title">用户注册</h2>
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="regUsername" placeholder="请输入用户名">
+                    <div class="error-msg" id="regUsernameError"></div>
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="regPassword" placeholder="请输入密码">
+                    <div class="error-msg" id="regPasswordError"></div>
+                </div>
+                <div class="form-group">
+                    <label>确认密码</label>
+                    <input type="password" id="regConfirmPassword" placeholder="请再次输入密码">
+                    <div class="error-msg" id="regConfirmPasswordError"></div>
+                </div>
+                <div class="form-group">
+                    <label>昵称（选填）</label>
+                    <input type="text" id="regNickname" placeholder="请输入昵称">
+                </div>
+                <div class="form-group">
+                    <label>邮箱（选填）</label>
+                    <input type="email" id="regEmail" placeholder="请输入邮箱">
+                </div>
+                <button class="btn" onclick="handleRegister()">注 册</button>
+                <div class="switch-text">
+                    已有账号？<a onclick="toggleForm()">立即登录</a>
+                </div>
+            </div>
+
+            <div class="deco-poem">
+                <p>「读书破万卷，下笔如有神」</p>
+            </div>
+        </div>
+
+        <div class="back-home">
+            <a href="/">← 返回首页</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+
+        // 显示顶部提示
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            // 触发重排以激活动画
+            void toast.offsetWidth;
+            toast.classList.add('show');
+            // 3秒后自动消失
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function toggleForm() {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            if (loginForm.style.display === 'none') {
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+            } else {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+            }
+        }
+
+        function showError(elementId, message) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+
+        function clearErrors() {
+            document.querySelectorAll('.error-msg').forEach(el => el.style.display = 'none');
+        }
+
+        async function handleLogin() {
+            clearErrors();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!username) { showError('loginUsernameError', '请输入用户名'); return; }
+            if (!password) { showError('loginPasswordError', '请输入密码'); return; }
+
+            try {
+                const res = await fetch(API_BASE + '/api/user/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const json = await res.json();
+                if (json.success) {
+                    showToast('登录成功，正在跳转...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    showToast(json.message || '登录失败', 'error');
+                }
+            } catch (e) {
+                showToast('网络错误，请稍后重试', 'error');
+            }
+        }
+
+        async function handleRegister() {
+            clearErrors();
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            const nickname = document.getElementById('regNickname').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+
+            if (!username) { showError('regUsernameError', '请输入用户名'); return; }
+            if (!password) { showError('regPasswordError', '请输入密码'); return; }
+            if (password !== confirmPassword) { showError('regConfirmPasswordError', '两次密码输入不一致'); return; }
+
+            try {
+                const res = await fetch(API_BASE + '/api/user/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, nickname, email })
+                });
+                const json = await res.json();
+                if (json.success) {
+                    showToast('注册成功，请登录', 'success');
+                    setTimeout(() => {
+                        toggleForm();
+                    }, 1500);
+                } else {
+                    showToast(json.message || '注册失败', 'error');
+                }
+            } catch (e) {
+                showToast('网络错误，请稍后重试', 'error');
+            }
+        }
+
+        // 回车键提交
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const loginForm = document.getElementById('loginForm');
+                if (loginForm.style.display !== 'none') {
+                    handleLogin();
+                } else {
+                    handleRegister();
+                }
+            }
+        });
+
+        // 检查是否已登录
+        async function checkLogin() {
+            try {
+                const res = await fetch(API_BASE + '/api/user/check');
+                const json = await res.json();
+                if (json.success && json.loggedIn) {
+                    showToast('已登录，正在跳转...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                }
+            } catch (e) {}
+        }
+        checkLogin();
+    </script>
+</body>
+</html>

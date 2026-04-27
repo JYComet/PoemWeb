@@ -123,6 +123,35 @@ public class AIPoemService {
         return callAIAPI(systemPrompt, userMessage);
     }
 
+    // AI检索古诗词，返回JSON格式的结构化数据
+    public String searchPoemByAI(String keyword) {
+        String systemPrompt = "你是一个专业的古诗词数据库助手。请根据用户搜索的关键词（可能是诗名、作者或诗句内容），返回最匹配的古诗词信息。请以严格的JSON数组格式返回，不要包含任何其他文字说明。每首诗的格式如下：[{\"title\":\"诗名\",\"author\":\"作者\",\"dynasty\":\"朝代\",\"content\":\"诗词内容\",\"annotation\":\"注释（可选）\",\"translation\":\"译文（可选）\",\"background\":\"创作背景（可选）\",\"emotion\":\"情感主旨（可选）\",\"allusion\":\"典故意象（可选）\",\"tag\":\"题材\"}]。如果有多首相关诗词，返回多条记录。如果完全找不到相关诗词，返回空数组[]。请确保JSON格式正确，所有字段值都是字符串。";
+
+        String userMessage = String.format("请搜索关于以下关键词的古诗词信息：%s", keyword);
+
+        String response = callAIAPI(systemPrompt, userMessage);
+        
+        // 尝试从AI响应中提取JSON
+        return extractJSONFromResponse(response);
+    }
+
+    // 从AI响应中提取JSON
+    private String extractJSONFromResponse(String response) {
+        // 尝试找到JSON数组
+        int start = response.indexOf('[');
+        int end = response.lastIndexOf(']');
+        if (start >= 0 && end > start) {
+            return response.substring(start, end + 1);
+        }
+        // 如果找不到数组，尝试找对象
+        start = response.indexOf('{');
+        end = response.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            return response.substring(start, end + 1);
+        }
+        return "[]";
+    }
+
     // 飞花令AI辅助
     public String feihualingWithAI(String keyword, List<String> existingLines) {
         String systemPrompt = "你是一个飞花令游戏助手，请根据用户给定的关键字，提供含有该关键字的古诗词名句。要求诗句准确无误，并注明出处（诗名和作者）。";

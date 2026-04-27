@@ -41,9 +41,27 @@ CREATE TABLE IF NOT EXISTS poem (
     background TEXT,
     emotion TEXT,
     allusion TEXT,
+    data_source TINYINT NOT NULL DEFAULT 0 COMMENT '0:数据库自带, 1:AI生成',
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (author_id) REFERENCES author(id),
     FOREIGN KEY (dynasty_id) REFERENCES dynasty(id),
     FOREIGN KEY (tag_id) REFERENCES tag(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建用户表
+CREATE TABLE IF NOT EXISTS sys_user (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    nickname VARCHAR(50),
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '1:正常, 0:禁用',
+    role VARCHAR(20) NOT NULL DEFAULT 'USER',
+    last_login_time TIMESTAMP NULL,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建知识图谱节点表

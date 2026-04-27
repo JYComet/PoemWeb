@@ -1,6 +1,8 @@
 package com.poemweb.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.poemweb.entity.Author;
 import com.poemweb.entity.Dynasty;
 import com.poemweb.entity.Poem;
@@ -10,9 +12,11 @@ import com.poemweb.mapper.DynastyMapper;
 import com.poemweb.mapper.PoemMapper;
 import com.poemweb.mapper.TagMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class PoemService {
@@ -24,10 +28,86 @@ public class PoemService {
     private DynastyMapper dynastyMapper;
     @Autowired
     private TagMapper tagMapper;
+    @Autowired
+    @Lazy
+    private AIPoemService aiPoemService;
 
-    // 搜索诗词
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // 通过标题搜索诗词（增强版：数据库无结果时调用AI）
+    public Poem searchPoemByTitleWithAI(String title) {
+        // 先从数据库查找
+        Poem poem = getPoemByTitle(title);
+        
+        // 如果数据库有结果，直接返回
+        if (poem != null) {
+            return poem;
+        }
+        
+        // 数据库无结果，调用AI检索
+        if (!title.isEmpty()) {
+            List<Poem> aiPoems = searchPoemsFromAI(title);
+            if (!aiPoems.isEmpty()) {
+                return aiPoems.get(0); // 返回第一条AI找到的诗词
+            }
+        }
+        
+        return null;
+    }
+
+    // 搜索诗词（增强版：数据库无结果时调用AI）
     public List<Poem> searchPoems(String keyword, String author, String dynasty, String tag) {
-        return poemMapper.searchPoems(keyword, author, dynasty, tag);
+        List<Poem> poems = poemMapper.searchPoems(keyword, author, dynasty, tag);
+        
+        // 如果数据库有结果，直接返回
+        if (!poems.isEmpty()) {
+            return poems;
+        }
+        
+        // 数据库无结果，尝试调用AI检索
+        if (!keyword.isEmpty()) {
+            return searchPoemsFromAI(keyword);
+        }
+        
+        return poems;
+    }
+
+    // 从AI检索古诗词
+    private List<Poem> searchPoemsFromAI(String keyword) {
+        try {
+            String jsonResult = aiPoemService.searchPoemByAI(keyword);
+            
+            JsonNode rootNode = objectMapper.readTree(jsonResult);
+            List<Poem> aiPoems = new ArrayList<>();
+            
+            if (rootNode.isArray()) {
+                for (JsonNode poemNode : rootNode) {
+                    Poem poem = new Poem();
+                    poem.setTitle(poemNode.has("title") ? poemNode.get("title").asText() : "");
+                    poem.setAuthor(poemNode.has("author") ? poemNode.get("author").asText() : "未知");
+                    poem.setDynasty(poemNode.has("dynasty") ? poemNode.get("dynasty").asText() : "未知");
+                    poem.setContent(poemNode.has("content") ? poemNode.get("content").asText() : "");
+                    poem.setAnnotation(poemNode.has("annotation") ? poemNode.get("annotation").asText() : null);
+                    poem.setTranslation(poemNode.has("translation") ? poemNode.get("translation").asText() : null);
+                    poem.setBackground(poemNode.has("background") ? poemNode.get("background").asText() : null);
+                    poem.setEmotion(poemNode.has("emotion") ? poemNode.get("emotion").asText() : null);
+                    poem.setAllusion(poemNode.has("allusion") ? poemNode.get("allusion").asText() : null);
+                    poem.setTag(poemNode.has("tag") ? poemNode.get("tag").asText() : "其他");
+                    poem.setDataSource(1); // AI生成
+                    poem.setCreateTime(LocalDateTime.now());
+                    poem.setUpdateTime(LocalDateTime.now());
+                    
+                    // 保存到数据库
+                    savePoem(poem);
+                    aiPoems.add(poem);
+                }
+            }
+            
+            return aiPoems;
+        } catch (Exception e) {
+            System.err.println("AI检索古诗词失败: " + e.getMessage());
+            return new ArrayList<>();
+        }
     }
 
     // 根据标题获取诗词详情

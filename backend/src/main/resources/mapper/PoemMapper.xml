@@ -15,6 +15,7 @@
         <result property="background" column="background"/>
         <result property="emotion" column="emotion"/>
         <result property="allusion" column="allusion"/>
+        <result property="dataSource" column="data_source"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
         <result property="author" column="author_name"/>

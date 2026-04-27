@@ -11,6 +11,8 @@ import com.poemweb.mapper.DynastyMapper;
 import com.poemweb.mapper.PoemMapper;
 import com.poemweb.mapper.TagMapper;
 import com.poemweb.service.GraphDbService;
+import com.poemweb.service.TrajectoryService;
+import com.poemweb.service.PoemDetailEnhancer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
@@ -39,6 +41,12 @@ public class DataMigration implements CommandLineRunner {
 
     @Autowired
     private GraphDbService graphDbService;
+
+    @Autowired
+    private TrajectoryService trajectoryService;
+
+    @Autowired
+    private PoemDetailEnhancer poemDetailEnhancer;
 
     private Map<String, Long> authorCache = new HashMap<>();
     private Map<String, Long> dynastyCache = new HashMap<>();
@@ -86,6 +94,14 @@ public class DataMigration implements CommandLineRunner {
             // 构建知识图谱
             System.out.println("开始构建知识图谱...");
             graphDbService.buildKnowledgeGraph();
+
+            // 初始化诗人行迹数据
+            System.out.println("开始初始化诗人行迹数据...");
+            trajectoryService.initTrajectoryFromGraph();
+
+            // 丰富诗词详细信息
+            System.out.println("开始丰富诗词详细信息...");
+            poemDetailEnhancer.enhancePoemDetails();
 
         } catch (Exception e) {
             System.err.println("数据导入失败: " + e.getMessage());

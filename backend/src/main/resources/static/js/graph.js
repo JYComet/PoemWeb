@@ -393,7 +393,6 @@ function renderKnowledgeGraph(chartDom, data) {
       links: data.links,
       categories: data.categories,
       roam: true,
-      draggable: true,
       label: {
         show: true,
         position: 'right',
@@ -402,9 +401,7 @@ function renderKnowledgeGraph(chartDom, data) {
       force: {
         repulsion: 300,
         edgeLength: 100,
-        gravity: 0.1,
-        friction: 0.6,
-        layoutAnimation: false
+        gravity: 0.1
       },
       lineStyle: {
         color: 'source',
@@ -427,21 +424,6 @@ function renderKnowledgeGraph(chartDom, data) {
   };
 
   knowledgeGraphChart.setOption(option);
-
-  // 禁用初始动画，保持图谱静止
-  setTimeout(function() {
-    if (knowledgeGraphChart) {
-      knowledgeGraphChart.setOption({
-        series: [{
-          force: {
-            repulsion: 300,
-            edgeLength: 100,
-            gravity: 0.1
-          }
-        }]
-      });
-    }
-  }, 100);
 
   // 添加窗口大小变化时的自适应
   window.addEventListener('resize', function() {

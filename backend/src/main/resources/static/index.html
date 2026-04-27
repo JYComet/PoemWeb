@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div id="toast" class="toast"></div>
   <div class="app">
     <!-- 顶部导航 -->
     <header class="header">
@@ -18,6 +19,32 @@
           <span class="logo-icon">詩</span>
           <h1>诗韵雅集</h1>
           <p class="subtitle">古诗词智能问答 · 一站式学习与互动</p>
+        </div>
+        <div class="user-status-container">
+          <!-- 未登录状态 -->
+          <div id="user-not-logged" class="user-not-logged">
+            <a href="/login.html" class="btn btn-login">登录</a>
+            <a href="/login.html" class="btn btn-login btn-register">注册</a>
+          </div>
+          <!-- 已登录状态 -->
+          <div id="user-logged" class="user-logged" style="display: none;">
+            <div class="user-avatar" id="user-avatar-trigger">
+              <span class="avatar-icon">👤</span>
+              <span id="user-display-name" class="user-name">用户名</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="user-dropdown" id="user-dropdown" style="display: none;">
+              <div class="dropdown-header">
+                <span class="dropdown-username" id="dropdown-username">用户名</span>
+                <span class="dropdown-role">诗词爱好者</span>
+              </div>
+              <div class="dropdown-divider"></div>
+              <a href="#" class="dropdown-item" data-section="quiz">诗词问答</a>
+              <a href="#" class="dropdown-item" data-section="wrong">我的错题</a>
+              <div class="dropdown-divider"></div>
+              <a href="#" class="dropdown-item dropdown-logout" id="btn-logout">退出登录</a>
+            </div>
+          </div>
         </div>
         <div class="search-bar-container">
           <div class="search-bar">
@@ -46,6 +73,7 @@
           <a href="#" class="nav-link" data-section="nav">分类导航</a>
           <a href="#" class="nav-link" data-section="graph">知识图谱</a>
           <a href="#" class="nav-link" data-section="trajectory">诗人行迹</a>
+          <a href="#" class="nav-link" data-section="quiz">诗词问答</a>
         </div>
       </div>
     </header>
@@ -58,9 +86,10 @@
             <h2>诗韵雅集</h2>
             <p>传承中华诗词之美</p>
             <div class="hero-buttons">
-              <a href="#" class="btn btn-primary" data-section="recite">开始背诵默写</a>
-              <a href="#" class="btn btn-secondary" data-section="qa">智能问答</a>
-            </div>
+            <a href="#" class="btn btn-primary" data-section="recite">开始背诵默写</a>
+            <a href="#" class="btn btn-secondary" data-section="qa">智能问答</a>
+            <a href="#" class="btn btn-secondary" data-section="quiz">诗词问答</a>
+          </div>
           </div>
           <div class="hero-bg"></div>
         </div>
@@ -97,6 +126,16 @@
               <div class="feature-icon">🗺️</div>
               <h4>诗人行迹</h4>
               <p>探索诗人创作轨迹与历史行迹地图</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🎯</div>
+              <h4>诗词问答</h4>
+              <p>系统自动出题，巩固诗词知识</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">📚</div>
+              <h4>我的错题</h4>
+              <p>回顾答错题目，查漏补缺</p>
             </div>
           </div>
         </div>
@@ -294,9 +333,74 @@
           <div class="trajectory-detail-panel" id="trajectory-detail-panel"></div>
         </div>
       </section>
-    </main>
 
-    <!-- 诗词详情弹窗 -->
+      <!-- 诗词问答 -->
+      <section id="quiz" class="section">
+        <div class="section-header">
+          <h2>📝 诗词问答</h2>
+          <p class="section-desc">基于知识图谱自动生成题目，巩固诗词知识</p>
+        </div>
+        <div class="quiz-container">
+          <!-- 子标签页 -->
+          <div class="quiz-tabs">
+            <button class="quiz-tab-btn active" data-quiz-tab="practice">📝 开始答题</button>
+            <button class="quiz-tab-btn" data-quiz-tab="wrong"> 我的错题</button>
+          </div>
+
+          <!-- 答题面板 -->
+          <div id="quiz-panel" class="quiz-panel active">
+            <div id="quizSetup" class="quiz-setup-card">
+              <div class="quiz-deco-top"></div>
+              <h3>🏮 选择题库</h3>
+              <div class="quiz-settings">
+                <div class="setting-item">
+                  <label>📋 题目数量：</label>
+                  <input type="number" id="questionCount" value="10" min="5" max="50">
+                  <span class="setting-hint">5-50道题</span>
+                </div>
+                <div class="setting-item">
+                  <label> 题目类型：</label>
+                  <select id="questionType">
+                    <option value="choice">选择题</option>
+                    <option value="judge">判断题</option>
+                    <option value="all">综合类型</option>
+                  </select>
+                  <span class="setting-hint">多种题型可选</span>
+                </div>
+                <button class="btn btn-primary btn-large" id="btn-start-quiz" onclick="startQuiz()">
+                  <span class="btn-icon">✍️</span>开始答题
+                </button>
+              </div>
+            </div>
+            <div id="quizArea" style="display: none;">
+              <!-- 进度条 -->
+              <div class="quiz-progress-bar">
+                <div class="progress-info">
+                  <span id="progressText">进度：0/10</span>
+                  <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-track">
+                  <div id="progressFill" class="progress-fill"></div>
+                </div>
+              </div>
+              <div id="quizQuestions"></div>
+              <div id="quizResult" class="quiz-result" style="display: none;"></div>
+            </div>
+          </div>
+
+          <!-- 错题面板 -->
+          <div id="wrong-panel" class="quiz-panel">
+            <div class="wrong-container">
+              <div id="wrongAnswers"></div>
+              <div id="wrongEmpty" class="empty-state">
+                <p>暂无错题，继续加油！</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 诗词详情弹窗 -->
     <div class="modal" id="poem-modal">
       <div class="modal-content">
         <button class="modal-close" id="modal-close">×</button>

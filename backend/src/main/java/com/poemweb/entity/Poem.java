@@ -1,6 +1,7 @@
 package com.poemweb.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -43,16 +44,16 @@ public class Poem {
     @Column(columnDefinition = "TEXT")
     private String allusion;
 
+    @Column(nullable = false, columnDefinition = "TINYINT DEFAULT 0 COMMENT '0:数据库自带, 1:AI生成'")
+    private Integer dataSource = 0;
+
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
-    // 非数据库字段（供XML resultMap映射使用，不映射到数据库列）
-    @Transient
+    // 数据库字段：作者、朝代、题材（由知识图谱关联或AI补充）
     private String author;
 
-    @Transient
     private String dynasty;
 
-    @Transient
     private String tag;
 }
